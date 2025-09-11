@@ -68,3 +68,5 @@ build/
 
 .state/
 outputs/
+
+menu_timestamps
