@@ -1,9 +1,16 @@
 #!/usr/bin/env bats
+load './load.bash'
 
-@test "dotfiles directory exists" {
-  [ -d "dotfiles" ]
+@test "repo root exists" {
+  [ -d "${REPO_ROOT}" ]
 }
 
-@test "common_core submodule directory exists" {
-  [ -d "lib/common_core" ]
+@test "dotfiles directory exists and is not empty" {
+  [ -d "${REPO_ROOT}/dotfiles" ]
+  [ -n "$(ls -A "${REPO_ROOT}/dotfiles")" ]
+}
+
+@test "config files exist" {
+  [ -f "${REPO_ROOT}/config/config.sh" ]
+  [ -f "${REPO_ROOT}/config/lists.sh" ]
 }
