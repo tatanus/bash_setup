@@ -1,0 +1,70 @@
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Compiled output
+*.out
+*.o
+*.so
+*.a
+*.la
+
+# PyCharm IDE directories
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Sublime Text settings
+*.sublime-workspace
+*.sublime-project
+
+# System files
+.DS_Store
+Thumbs.db
+.DS_Store
+**/.DS_Store
+._*  
+
+# Shell history and temp files
+.history
+.history_all
+*.sh~
+*.sh.bak
+*.sh.swp
+
+# Backup and cache files
+*.backup
+*.cache
+.cache/
+*.save
+*.old
+
+# Debugging files
+*.debug
+*.core
+*.stackdump
+
+# Node.js/Package-related (if applicable)
+node_modules/
+npm-debug.log*
+
+# Python virtual environments (if applicable)
+env/
+venv/
+
+# Configuration files (optional, depending on project needs)
+*.env
+*.config
+
+# Generated files
+dist/
+build/
+
+.state/
+outputs/

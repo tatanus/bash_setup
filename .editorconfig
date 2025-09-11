@@ -1,0 +1,120 @@
+# EditorConfig configuration file
+# http://editorconfig.org
+# Ensures consistent coding styles between different editors and IDEs.
+
+# Indicates this is the root configuration file
+root = true
+
+
+
+# Settings for all shell script files (*.sh)
+[*.sh]
+# Use spaces for indentation (not tabs)
+indent_style = space
+
+# Set indentation size to 4 spaces
+indent_size = 4
+
+# Use Unix-style line endings (LF)
+end_of_line = lf
+
+# Use UTF-8 character encoding
+charset = utf-8
+
+# Remove any trailing whitespace on save
+trim_trailing_whitespace = true
+
+# Ensure a final newline is present at the end of the file
+insert_final_newline = true
+
+# Shell-specific formatting options (used by tools like shfmt)
+
+# Shell dialect to use for formatting; "posix" is for maximum portability
+shell_variant = bash
+
+# Place `do` or `then` on the next line; improves readability
+binary_next_line = false
+
+# Indent case blocks in switch statements
+switch_case_indent = true
+
+# Insert a space between redirection operators (e.g., `> file`)
+space_redirects = true
+
+# Preserve padding in tables or similar constructs (e.g., alignment of comments)
+keep_padding = true
+
+# Keep the function definition on the same line as the name (e.g., `myfunc() {`)
+function_next_line = false
+
+# Avoid splitting long lines where possible
+never_split = true
+
+
+
+# Markdown files (*.md)
+[*.md]
+# Do not trim trailing whitespace; some formats use it for intentional line breaks
+trim_trailing_whitespace = false
+
+# Ignore settings for files in the "third_party" directory
+[third_party/**]
+ignore = true
+
+
+
+# Git commit message file settings
+[COMMIT_EDITMSG]
+# Set a maximum line length for commit messages
+max_line_length = 72
+
+
+
+[*.yml]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+
+
+# Ignore binary files
+[*.{png,jpg,jpeg,gif,svg,ico,bin}]
+ignore = true
+
+
+
+# BATS UNIT TESTS
+[*.bats]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+
+
+# Catch-all default settings
+[*]
+# Default settings for all file types unless overridden by specific sections
+
+# Use spaces for indentation by default
+indent_style = space
+
+# Set default indentation size to 4 spaces
+indent_size = 4
+
+# Use Unix-style line endings
+end_of_line = lf
+
+# Use UTF-8 character encoding
+charset = utf-8
+
+# Trim trailing whitespace on save
+trim_trailing_whitespace = true
+
+# Ensure a final newline at the end of all files
+insert_final_newline = true
