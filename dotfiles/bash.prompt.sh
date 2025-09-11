@@ -160,12 +160,33 @@ if [[ -z "${BASH_PROMPT_SH_LOADED:-}" ]]; then
     # =============================================================================
     # Configure prompt refresh (integrate with bash-preexec if present)
     # =============================================================================
+    # Configure prompt refresh: prefer precmd_functions; otherwise use PROMPT_COMMAND as an array
     if declare -p precmd_functions > /dev/null 2>&1; then
-        # If bash-preexec has been loaded already, append gen_prompt
-        precmd_functions+=(gen_prompt)
+        # Append gen_prompt to precmd_functions if not already present
+        _gp_add=1
+        for _pc in "${precmd_functions[@]}"; do
+            [[ "${_pc}" == "gen_prompt" ]] && _gp_add=0 && break
+        done
+        ((_gp_add)) && precmd_functions+=("gen_prompt")
+        unset _pc _gp_add
     else
-        # Otherwise fall back to PROMPT_COMMAND
-        PROMPT_COMMAND="${PROMPT_COMMAND:+${PROMPT_COMMAND}; }gen_prompt"
-    fi
+        _pc_old="${PROMPT_COMMAND-}" # capture any existing string without tripping set -u
+        # shellcheck disable=SC2090
+        _decl="$(declare -p PROMPT_COMMAND 2> /dev/null || true)"
+        if [[ ! "${_decl}" =~ ^declare\ -a\ PROMPT_COMMAND= ]]; then
+            # Re-declare as a global array, preserving old value (as one element) if present
+            unset PROMPT_COMMAND || true
+            declare -ga PROMPT_COMMAND=()
+            [[ -n "${_pc_old}" ]] && PROMPT_COMMAND+=("${_pc_old}")
+        fi
+        unset _decl _pc_old
 
+        # Append gen_prompt only if not already present
+        _gp_add=1
+        for _pc in "${PROMPT_COMMAND[@]}"; do
+            [[ "${_pc}" == "gen_prompt" ]] && _gp_add=0 && break
+        done
+        ((_gp_add)) && PROMPT_COMMAND+=("gen_prompt")
+        unset _pc _gp_add
+    fi
 fi

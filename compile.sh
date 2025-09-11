@@ -17,10 +17,10 @@ green='\033[92m'
 yellow='\033[33m'
 red='\033[91m'
 reset='\033[0m'
-log_info()  { printf "${blue}[* INFO  ]${reset} %s\n"   "$*"; }
-log_pass()  { printf "${green}[+ PASS  ]${reset} %s\n"  "$*"; }
-log_warn()  { printf "${yellow}[! WARN  ]${reset} %s\n" "$*"; }
-log_fail()  { printf "${red}[- FAIL  ]${reset} %s\n"    "$*"; }
+log_info() { printf "${blue}[* INFO  ]${reset} %s\n" "$*"; }
+log_pass() { printf "${green}[+ PASS  ]${reset} %s\n" "$*"; }
+log_warn() { printf "${yellow}[! WARN  ]${reset} %s\n" "$*"; }
+log_fail() { printf "${red}[- FAIL  ]${reset} %s\n" "$*"; }
 
 trap 'log_fail "Unexpected error at ${BASH_SOURCE[0]##*/}:${LINENO}"; exit 1' ERR
 
