@@ -1,2 +1,4 @@
 [submodule "lib/common_core"]
 	branch = main
+	path = lib/common_core
+	url = git@github.com:tatanus/common_core.git
