@@ -72,8 +72,7 @@ update_readme_submodules() {
     # shellcheck disable=SC2016
     while IFS= read -r line; do
         paths+=("${line}")
-    done < <(git config --file .gitmodules --get-regexp 'submodule\..*\.path' |
-        awk '{print $2}' | sort -u)
+    done < <(git config --file .gitmodules --get-regexp 'submodule\..*\.path' | awk '{print $2}' | sort -u)
 
     local list_content=''
     if ((${#paths[@]} == 0)); then
