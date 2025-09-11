@@ -1,0 +1,209 @@
+# =============================================================================
+# NAME        : interactive_bashrc.sh
+# DESCRIPTION : Custom interactive shell config for secure, terminal-aware sessions
+# AUTHOR      : Adam Compton
+# DATE CREATED: 2025-06-09 08:34:00
+# =============================================================================
+# EDIT HISTORY:
+# DATE                 | EDITED BY    | DESCRIPTION OF CHANGE
+# ---------------------|--------------|----------------------------------------
+# 2025-06-09 08:34:00  | Adam Compton | Initial creation.
+# =============================================================================
+
+###############################################################################
+# SAFETY SETTINGS
+###############################################################################
+set -uo pipefail
+
+#trap 'echo "[$(date +"%F %T")] EXITING shell"; exit' EXIT
+#trap 'echo "[$(date +"%F %T")] INTERRUPTED"; exit 130' INT
+#trap 'echo "[$(date +"%F %T")] ERROR on line $LINENO"; exit 1' ERR
+
+###############################################################################
+# INTERACTIVITY CHECK
+###############################################################################
+if [[ -z "${PS1:-}" ]]; then
+    return
+fi
+
+###############################################################################
+# SETTING ANY REQUIRED ENV
+###############################################################################
+PWD="${PWD:-}"
+HOSTNAME="${HOSTNAME:-localhost}"
+PS0="${PS0:-}"
+PS1="${PS1:-}"
+PS2="${PS2:-}"
+
+###############################################################################
+# TERMINAL AWARENESS SETUP
+###############################################################################
+if [[ -n "${TERM_PROGRAM:-}" ]]; then
+    case "${TERM_PROGRAM}" in
+        "ghostty")
+            GHOSTTY_RESOURCES_DIR="${GHOSTTY_RESOURCES_DIR:-}"
+            GHOSTTY_BASH_INJECT="${GHOSTTY_BASH_INJECT:-}"
+            GHOSTTY_BASH_ENV="${GHOSTTY_BASH_ENV:-}"
+            GHOSTTY_BASH_RCFILE="${GHOSTTY_BASH_RCFILE:-$HOME/.bashrc}"
+            GHOSTTY_SHELL_INTEGRATION_NO_SUDO="${GHOSTTY_SHELL_INTEGRATION_NO_SUDO:-0}"
+            GHOSTTY_SHELL_INTEGRATION_NO_CURSOR="${GHOSTTY_SHELL_INTEGRATION_NO_CURSOR:-0}"
+            GHOSTTY_SHELL_INTEGRATION_NO_TITLE="${GHOSTTY_SHELL_INTEGRATION_NO_TITLE:-0}"
+            _ghostty_executing="${_ghostty_executing:-}"
+            _ghostty_last_reported_cwd="${_ghostty_last_reported_cwd:-}"
+            ;;
+        "Apple_Terminal")
+            ;;
+        "iTerm.app")
+            export USE_TMUX=false
+            ;;
+        "gnome-terminal")
+            ;;
+        "konsole")
+            ;;
+        "xfce4-terminal")
+            ;;
+        "alacritty")
+            ;;
+        "kitty")
+            ;;
+        "tilix")
+            ;;
+        "hyper")
+            ;;
+        "WarpTerminal")
+            ;;
+        "wezterm")
+            ;;
+        "xterm")
+            ;;
+        "screen")
+            ;;
+        "tmux")
+            ;;
+        *)
+            [[ -n "${DEBUG_BASHRC}" ]] && echo "Unknown terminal: ${TERM_PROGRAM}"
+            ;;
+    esac
+fi
+
+###############################################################################
+# TERM AND DISPLAY SETTINGS
+###############################################################################
+if [[ "$TERM" =~ ^screen ]]; then
+    export TERM="screen-256color"
+else
+    export TERM="xterm-256color"
+fi
+
+# Silence bash deprecation warning
+export BASH_SILENCE_DEPRECATION_WARNING=1
+
+# Check window size after each command and update LINES and COLUMNS if necessary
+shopt -s checkwinsize
+
+# Make less more friendly for non-text input files
+if command -v lesspipe &>/dev/null; then
+    eval "$(SHELL=/bin/sh lesspipe)"
+fi
+
+###############################################################################
+# CHROOT AWARENESS
+###############################################################################
+# Set variable identifying the chroot you work in (used in the prompt below)
+if [[ -z "${debian_chroot:-}" ]] && [[ -r /etc/debian_chroot ]]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# ###############################################################################
+# # HISTORY SETUP (custom...  disabled for now)
+# ###############################################################################
+# timestamp=$(date +"%Y%m%d_%H%M%S")
+# window="${WINDOW:-win}"
+# session_tag=""
+# 
+# # Unique HISTFILE per screen or tmux session
+# if [[ -n "${TMUX:-}" ]]; then
+#     session_name=$(tmux display-message -p '#S' 2>/dev/null || echo "tmux_${timestamp}")
+#     session_tag="tmux_${session_name}_${window}"
+# elif [[ -n "${STY:-}" ]]; then
+#     session_name=$(echo "$STY" | cut -d. -f2)
+#     session_tag="screen_${session_name:-$$}_${window}"
+# else
+#     session_tag="bash"
+# fi
+# 
+# export HISTFILE="$HOME/.bash_history_${session_tag}"
+# export HISTCONTROL=
+# export HISTIGNORE=
+# export HISTSIZE=100000
+# export HISTFILESIZE=100000
+# export HISTTIMEFORMAT="[%m/%d/%y %H:%M:%S] "
+# shopt -s histappend
+# 
+# if [[ ! -f "${HISTFILE}" ]]; then
+#     touch "${HISTFILE}" && chmod 600 "${HISTFILE}"
+# fi
+
+###############################################################################
+# DEFAULT BASH HISTORY CONFIGURATION
+###############################################################################
+export HISTFILE="$HOME/.bash_history"
+export HISTCONTROL=
+export HISTIGNORE=
+export HISTSIZE=100000
+export HISTFILESIZE=100000
+export HISTTIMEFORMAT="[%m/%d/%y %H:%M:%S] "
+
+shopt -s histappend
+
+if [[ ! -f "${HISTFILE}" ]]; then
+    touch "${HISTFILE}" && chmod 600 "${HISTFILE}"
+fi
+
+###############################################################################
+# LOAD PRIMARY BASH CONFIG FILES
+###############################################################################
+primary_bash_files=(
+    "${HOME}/.config/bash/bash.path.sh"
+    "${HOME}/.config/bash/bash.env.sh"
+    "${HOME}/.config/bash/path.env.sh"
+)
+
+# Source additional configurations
+for file in "${primary_bash_files[@]}"; do
+    [[ -f "${file}" ]] && source "${file}"
+done
+
+###############################################################################
+# LOAD SECONDARY BASH CONFIG FILES
+###############################################################################
+secondary_bash_files=(
+    # BASH visual elements
+    "${BASH_DIR}/bash.visuals.sh"
+
+    # Useful BASH aliases
+    "${BASH_DIR}/bash.aliases.sh"
+
+    # Configure the BASH prompt
+    "${BASH_DIR}/bash.prompt.sh"
+
+    # Scripts or extra configuration
+    "${BASH_DIR}/screen.aliases.sh"
+    "${BASH_DIR}/tmux.aliases.sh"
+    "${BASH_DIR}/ssh.aliases.sh"
+
+    # Custom combined history file 
+    "${BASH_DIR}/combined.history.sh"
+
+    # pentest environment if present
+    "${BASH_DIR}/pentest.sh"
+)
+
+# Source additional configurations
+for file in "${secondary_bash_files[@]}"; do
+    [[ -f "${file}" ]] && source "${file}"
+done
+
+###############################################################################
+# EXTRA CONFIGS
+###############################################################################

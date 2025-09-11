@@ -1,0 +1,107 @@
+# Enable case-insensitive completion
+set completion-ignore-case on
+
+# Make tab autocomplete cycle through options instead of stopping
+set show-all-if-ambiguous on
+set menu-complete-display-prefix on
+
+# Enable colored autocomplete suggestions if supported
+set colored-completion-prefix on
+set colored-stats on
+
+# Use vi mode for command-line editing if Vim is your preferred editor
+# set editing-mode vi
+# Uncomment if you prefer emacs mode instead:
+set editing-mode emacs
+
+# -----------------------------------------------------------------------------
+# Scroll through history
+# -----------------------------------------------------------------------------
+# Classic history navigation with Up/Down Arrows
+"\e[A": "\C-p"
+"\e[B": "\C-n"
+
+# Ctrl + Up/Down enables filtered history search (type-to-search)
+"\e[1;5A": history-search-backward
+"\e[1;5B": history-search-forward
+
+# -----------------------------------------------------------------------------
+# Fix Home/End keys behavior for better compatibility
+# -----------------------------------------------------------------------------
+# Home key "Fn + Left Arrow (macOS)"
+"\e[1~": beginning-of-line
+
+# End key "Fn + Right Arrow (macOS)"
+"\e[4~": end-of-line
+
+# Home key (alternative)
+"\eOH": beginning-of-line
+
+# End key (alternative)
+"\eOF": end-of-line
+
+# -----------------------------------------------------------------------------
+# PageUp/PageDown (If not working, some terminals use different escape codes)
+# -----------------------------------------------------------------------------
+# PageUp "Fn + Up Arrow (macOS)"
+"\e[5~": history-search-backward
+
+# PageDown "Fn + Down Arrow (macOS)"
+"\e[6~": history-search-forward
+
+# -----------------------------------------------------------------------------
+# Enable Ctrl + Left/Right for word navigation
+# -----------------------------------------------------------------------------
+# Ctrl + Left Arrow
+"\e[1;5D": backward-word
+
+# Ctrl + Right Arrow
+"\e[1;5C": forward-word
+
+# Option + Left Arrow (macOS)
+"\e\e[D": backward-word
+
+# Option + Right Arrow (macOS)
+"\e\e[C": forward-word
+
+# -----------------------------------------------------------------------------
+# Enable Shift + Arrow Keys for selection (used in some terminals)
+# -----------------------------------------------------------------------------
+# Shift + Left Arrow
+"\e[1;2D": backward-char
+
+# Shift + Right Arrow
+"\e[1;2C": forward-char
+
+# Shift + Up Arrow
+"\e[1;2A": previous-history
+
+# Shift + Down Arrow
+"\e[1;2B": next-history
+
+# -----------------------------------------------------------------------------
+# Improve Delete/Backspace behavior across terminals
+# -----------------------------------------------------------------------------
+# Delete key
+"\e[3~": delete-char
+
+# Alternative Home key
+"\e[H": beginning-of-line
+
+# Alternative End key
+"\e[F": end-of-line
+
+# -----------------------------------------------------------------------------
+# Improve Command Line Behavior
+# -----------------------------------------------------------------------------
+# Ensure keypad is enabled
+set enable-keypad on
+
+# Disable annoying terminal bell
+set bell-style none
+
+# Keep cursor position in history
+set history-preserve-point on
+
+# Show (vi/emacs) mode in prompt
+set show-mode-in-prompt off

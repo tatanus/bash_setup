@@ -1,0 +1,8 @@
+# For shells that read ~/.profile (e.g., some POSIX shells in login mode),
+# we also forward them to ~/.bashrc if running Bash or if you want
+# consistent settings across different shells.
+
+# Check if we're running Bash and if ~/.bashrc exists
+if [[ -n "${BASH_VERSION}" ]] && [[ -f ~/.bashrc ]]; then
+    . ~/.bashrc
+fi

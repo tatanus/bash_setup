@@ -1,0 +1,68 @@
+" Enable syntax highlighting
+syntax on
+
+" Set indentation rules
+set tabstop=4        " Number of spaces for a tab
+set shiftwidth=4     " Auto-indent size
+set expandtab        " Convert tabs to spaces
+set autoindent
+set smartindent
+
+" Always enable paste mode
+set paste
+
+" Line numbering
+set number
+" set relativenumber   " Show relative line numbers for easy navigation
+
+" Display Line and Column
+set ruler
+
+" Use system clipboard
+set clipboard=unnamedplus
+
+" Highlight matching brackets
+set showmatch
+
+" Highlight search results and incremental search
+set hlsearch
+set incsearch
+
+" Set colorscheme
+colorscheme desert
+
+" Enable mouse support
+set mouse=a
+
+" Use modern mouse encoding if terminal supports it
+if has("mouse_sgr")
+    set ttymouse=sgr
+endif
+
+" Enable persistent undo
+set undofile
+set undodir=~/.vim/undodir
+
+" Define leader key
+let mapleader = " "
+
+" Shortcuts
+nnoremap <leader>w :w<CR>      " Save
+nnoremap <leader>q :q<CR>      " Quit
+nnoremap <leader>x :x<CR>      " Save & Quit
+
+" Set bat as default pager when opening files
+set grepprg=bat\ --paging=always\ --theme=ansi
+
+" Automatically reload the file if changed externally
+set autoread
+au FocusGained,BufEnter * checktime
+
+" Restore cursor to last position when reopening a file
+augroup restore_cursor
+  autocmd!
+  autocmd BufReadPost *
+        \ if line("'\"") > 0 && line("'\"") <= line("$") |
+        \   execute "normal! g`\"" |
+        \ endif
+augroup END

@@ -1,0 +1,143 @@
+# ==============================================================================
+# .screenrc Configuration File
+# Author: Adam Compton
+# Description:
+#   Optimized for systems where you want to select text with the mouse
+#   for copy/paste outside the screen session.
+#
+#   Works for:
+#     - Screen v4.x
+#
+#   Compatible with:
+#     - Bash and Zsh shells
+#     - SSH sessions from Linux, macOS, Windows, WSL, etc.
+#
+#   NOTE:
+#     This disables advanced mouse support inside screen (e.g. mouse in vim).
+#     Instead, mouse events go to your terminal, allowing text selection.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Set default shell to bash (or the user's default shell)
+# ------------------------------------------------------------------------------
+shell -/usr/bin/env bash
+
+# ------------------------------------------------------------------------------
+# Disable startup message to prevent unnecessary prompts when launching screen
+# ------------------------------------------------------------------------------
+startup_message off
+
+# ------------------------------------------------------------------------------
+# Ensure the log directory exists before screen starts
+# ------------------------------------------------------------------------------
+#   Put this line in your shell profile (~/.bash_profile or ~/.zshenv)
+#     mkdir -p "${HOME}/DATA/LOGS"
+
+# ------------------------------------------------------------------------------
+# Fix known xterm compatibility issues with screen
+# ------------------------------------------------------------------------------
+# Ensure Screen handles mouse events correctly in common terminals
+termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* 'ti@:te@'
+# Ensure text selection works with a double left-click (for copy-paste)
+#termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* 'cut=E3'
+# Disable mouse interaction inside Screen to allow terminal's native selection
+termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* '*:smcup@:rmcup@'
+
+# ------------------------------------------------------------------------------
+# Enable mouse support in screen
+# ------------------------------------------------------------------------------
+# DO NOT enable mousetrack if you want to highlight text with the mouse.
+# mousetrack on
+
+# Prevent screen from interfering with double-click selection
+#markkeys "^[OA=copy" "^[OB=paste"
+
+# ------------------------------------------------------------------------------
+# Define mouse escape sequence (safe even when mousetrack is disabled)
+# ------------------------------------------------------------------------------
+termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* "kmous=\E[M"
+
+# ------------------------------------------------------------------------------
+# Enable background color erase
+# ------------------------------------------------------------------------------
+# Enable text selection using Shift + Mouse (for copy-paste)
+defbce on
+
+# ------------------------------------------------------------------------------
+# Automatically detach screen sessions on disconnect
+# ------------------------------------------------------------------------------
+autodetach on
+
+# ------------------------------------------------------------------------------
+# Enable logging by default
+# ------------------------------------------------------------------------------
+deflog on
+
+# ------------------------------------------------------------------------------
+# Define the log file name and path for each screen window
+# Format: <SESSION_NAME>_<WINDOW_NUMBER>.<YYYYMMDD>-<HHMMSS>-<SECONDS>.screen
+# - %S = Session name
+# - %n = Window number
+# - %Y = Year
+# - %m = Month
+# - %d = Day
+# - %0c = Time in HH:MM format (requires post-processing to remove colons)
+# ------------------------------------------------------------------------------
+logfile "${HOME}"/DATA/LOGS/%S_%n.%Y%m%d-%0c.screen
+
+# ------------------------------------------------------------------------------
+# Flush the logging buffer every second to ensure real-time logging
+# ------------------------------------------------------------------------------
+logfile flush 1
+
+# ------------------------------------------------------------------------------
+# Define the scrollback buffer size (100,000 lines)
+# Allows viewing older output within a screen window
+# ------------------------------------------------------------------------------
+defscrollback 100000
+
+# ------------------------------------------------------------------------------
+# Enable UTF-8 support for proper display of special characters
+# ------------------------------------------------------------------------------
+defutf8 on
+
+# ------------------------------------------------------------------------------
+# Change the escape sequence to `Ctrl-a a` instead of `Ctrl-a`
+# This prevents conflicts with applications that use `Ctrl-a`
+# ------------------------------------------------------------------------------
+escape ^Aa
+
+# ------------------------------------------------------------------------------
+# Vertical and horizontal split bindings
+# ------------------------------------------------------------------------------
+bind | split -v
+bind - split
+
+# ------------------------------------------------------------------------------
+# Enable the hardstatus line for better window navigation
+# - `on`: Enables hardstatus line
+# - `alwayslastline`: Displays it at the bottom of the screen
+# ------------------------------------------------------------------------------
+hardstatus on
+hardstatus alwayslastline
+attrcolor b ".I"  # Bright color support
+
+# ------------------------------------------------------------------------------
+# Define the format of the hardstatus line for better usability
+# 
+# Format: [HOSTNAME] [DATE TIME:SECONDS] [WINDOW LIST]
+#
+# - `%{= kw}`  : Set color to white (default color)
+# - `%{= kG}`  : Set color to green (used for hostname and date/time)
+# - `%H`       : Display hostname
+# - `%Y-%m-%d` : Show date in YYYY-MM-DD format
+# - `%0c`      : Show current time (HH:MM format)
+# - `%-w`      : Left-aligned list of inactive windows
+# - `%{= kR}`  : Set color to red (for highlighting the active window)
+# - `%n %t`    : Show active window number and title
+# - `%+w`      : Right-aligned list of inactive windows
+#
+# Example Output:
+# [myhost] [2025-02-06 08:45:30]  0:bash  1:vim  [2 logs]  3:ssh  
+# ------------------------------------------------------------------------------
+hardstatus string "%{= kw}[%{= kG}%H%{= kw}] [%{= kG}%Y-%m-%d %0c%{= kw}] %-w%{= kR}[%n %t]%{= kw}%+w"

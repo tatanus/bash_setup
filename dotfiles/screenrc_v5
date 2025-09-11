@@ -1,0 +1,234 @@
+# ==============================================================================
+# .screenrc Configuration File
+# Author: Adam Compton
+# Description:
+#   Optimized for systems where you want to select text with the mouse
+#   for copy/paste outside the screen session.
+#
+#   Works for:
+#     - Screen v5.x
+#
+#   Compatible with:
+#     - Bash and Zsh shells
+#     - SSH sessions from Linux, macOS, Windows, WSL, etc.
+#
+#   NOTE:
+#     This disables advanced mouse support inside screen (e.g. mouse in vim).
+#     Instead, mouse events go to your terminal, allowing text selection.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Set default shell to bash (or the user's default shell)
+# ------------------------------------------------------------------------------
+shell -/usr/bin/env bash
+
+# ------------------------------------------------------------------------------
+# Disable startup message to prevent unnecessary prompts when launching screen
+# ------------------------------------------------------------------------------
+startup_message off
+
+# ------------------------------------------------------------------------------
+# Ensure the log directory exists before screen starts
+# ------------------------------------------------------------------------------
+startup_command mkdir -p "${HOME}"/DATA/LOGS
+
+# ------------------------------------------------------------------------------
+# Fix known xterm compatibility issues with screen
+# ------------------------------------------------------------------------------
+# Ensure Screen handles mouse events correctly in common terminals
+termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* 'ti@:te@'
+# Ensure text selection works with a double left-click (for copy-paste)
+#termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* 'cut=E3'
+# Disable mouse interaction inside Screen to allow terminal's native selection
+termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* '*:smcup@:rmcup@'
+
+# ------------------------------------------------------------------------------
+# Enable mouse support in screen
+# ------------------------------------------------------------------------------
+# DO NOT enable mousetrack if you want to highlight text with the mouse.
+# mousetrack on
+
+# Prevent screen from interfering with double-click selection
+markkeys "^[OA=copy" "^[OB=paste"
+
+# Bind F5 to enter copymode and put '?'. Then I can reverse search the buffer
+#bindkey -k k5 copy
+
+# ------------------------------------------------------------------------------
+# Define mouse escape sequence (safe even when mousetrack is disabled)
+# ------------------------------------------------------------------------------
+termcapinfo xterm*|rxvt*|Eterm*|gnome*|konsole*|alacritty*|kitty*|screen* "kmous=\E[M"
+
+# ------------------------------------------------------------------------------
+# Enable background color erase
+# ------------------------------------------------------------------------------
+# Enable text selection using Shift + Mouse (for copy-paste)
+defbce on
+
+# ------------------------------------------------------------------------------
+# Automatically detach screen sessions on disconnect
+# ------------------------------------------------------------------------------
+autodetach on
+
+# ------------------------------------------------------------------------------
+# Enable logging by default
+# ------------------------------------------------------------------------------
+deflog on
+
+# ------------------------------------------------------------------------------
+# Define the log file name and path for each screen window
+# Format: <SESSION_NAME>_<WINDOW_NUMBER>.<YYYYMMDD>-<HHMMSS>-<SECONDS>.screen
+# - %S = Session name
+# - %n = Window number
+# - %Y = Year
+# - %m = Month
+# - %d = Day
+# - %0c = Time in HH:MM format (requires post-processing to remove colons)
+# ------------------------------------------------------------------------------
+logfile "${HOME}"/DATA/LOGS/%S_%n.%Y%m%d-%0c.screen
+
+# ------------------------------------------------------------------------------
+# Flush the logging buffer every second to ensure real-time logging
+# ------------------------------------------------------------------------------
+logfile flush 1
+
+# ------------------------------------------------------------------------------
+# Define the scrollback buffer size (100,000 lines)
+# Allows viewing older output within a screen window
+# ------------------------------------------------------------------------------
+defscrollback 100000
+
+# ------------------------------------------------------------------------------
+# Enable UTF-8 support for proper display of special characters
+# ------------------------------------------------------------------------------
+defutf8 on
+
+# ------------------------------------------------------------------------------
+# Change the escape sequence to `Ctrl-a a` instead of `Ctrl-a`
+# This prevents conflicts with applications that use `Ctrl-a`
+# ------------------------------------------------------------------------------
+escape ^Aa
+
+# ------------------------------------------------------------------------------
+# Vertical and horizontal split bindings
+# ------------------------------------------------------------------------------
+bind | split -v
+bind - split
+
+# ------------------------------------------------------------------------------
+# Enable the hardstatus line for better window navigation
+# - `on`: Enables hardstatus line
+# - `alwayslastline`: Displays it at the bottom of the screen
+# ------------------------------------------------------------------------------
+hardstatus on
+hardstatus alwayslastline
+attrcolor b ".I"  # Bright color support
+
+# ------------------------------------------------------------------------------
+# HARDSTATUS LINE EXPLANATION
+# ===========================
+#
+# The following hardstatus string builds a colorized status bar for GNU Screen.
+# It displays the hostname, date/time, screen size, and window list, with
+# custom colors for clarity.
+#
+# STRING:
+#
+# hardstatus string "\033[0;37;40m[\
+# \033[1;32;40m%H\
+# \033[0;37;40m] \
+# \033[0;37;40m[\
+# \033[1;32;40m%Y-%m-%d %0c-%s\
+# \033[0;37;40m] \
+# %-w\
+# \033[1;31;40m[%n %t]\
+# \033[0;37;40m%+w"
+#
+# ————————————————
+# COMPONENT-BY-COMPONENT EXPLANATION:
+#
+# \033[0;37;40m
+#   → ESC sequence to set:
+#       - foreground color: white (37)
+#       - background color: black (40)
+#       - reset attributes (0)
+#
+# [ 
+#   → Literal character '[' to start a block
+#
+# \033[1;32;40m
+#   → Set color:
+#       - bold/bright (1)
+#       - foreground green (32)
+#       - background black (40)
+#
+# %H
+#   → Hostname of the machine where Screen is running.
+#
+# \033[0;37;40m
+#   → Reset color to normal white on black.
+#
+# ]
+#   → Literal character ']'
+#
+# [ 
+#   → Start next block with another literal '['
+#
+# \033[1;32;40m
+#   → Bright green text again.
+#
+# %Y-%m-%d
+#   → Year-Month-Day date (e.g. 2025-07-08).
+#
+# %0c
+#   → Time in HH:MM format (zero-padded).
+#
+# \033[0;37;40m
+#   → Reset color to white on black again.
+#
+# ]
+#   → Close the second block.
+#
+# %-w
+#   → Prints the list of windows left of the active window.
+#     Example:
+#       "0:bash 1:logs"
+#
+# \033[1;31;40m
+#   → Set bright red foreground for the active window block.
+#
+# [%n %t]
+#   → Active window information:
+#       - %n = active window number
+#       - %t = active window title
+#     Example:
+#       "[2 vim]"
+#
+# \033[0;37;40m
+#   → Reset color to white on black again.
+#
+# %+w
+#   → Prints the list of windows right of the active window.
+#
+# ————————————————
+# EXAMPLE HARDSTATUS OUTPUT:
+#
+#   [myhost] [2025-07-08 15:26] 0:bash 1:logs [2 vim] 3:ssh 4:htop
+#
+# Colors:
+#   - Hostname → bright green
+#   - Date/time → bright green
+#   - Active window → bright red
+#   - Other text → white
+##
+# ————————————————
+# COLORS USED:
+#
+#   \033[0;37;40m → normal white foreground, black background
+#   \033[1;32;40m → bright green foreground, black background
+#   \033[1;31;40m → bright red foreground, black background
+#
+# ------------------------------------------------------------------------------
+hardstatus string "\033[0;37;40m[\033[1;32;40m%H\033[0;37;40m] \033[0;37;40m[\033[1;32;40m%Y-%m-%d %0c\033[0;37;40m] %-w\033[1;31;40m[%n %t]\033[0;37;40m%+w"
+
+truecolor on
