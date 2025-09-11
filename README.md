@@ -7,3 +7,15 @@
 
 ![Bash >=4.0](https://img.shields.io/badge/Bash-%3E%3D4.0-4EAA25?logo=gnu-bash&logoColor=white)
 
+
+## Submodules
+## Submodules
+<!-- SUBMODULES-LIST:START -->
+
+* [lib/common_core](https://github.com/tatanus/common_core.git)
+
+<!-- SUBMODULES-LIST:END -->
+
+
+## License
+
