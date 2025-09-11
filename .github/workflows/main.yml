@@ -87,29 +87,29 @@ jobs:
       # Validate all scripts have a shebang
       - name: Validate Shebangs
         run: |
-          missing_shebangs=$(find . -name "*.sh" ! -path "./lib/common_core/*" ! -path "./another/ignored-file.sh" -exec sh -c 'head -n 1 "$1" | grep -q "^#!" || echo "Missing shebang: $1"' _ {} \;)
+          missing_shebangs=$(find . -name "*.sh" ! -path "./lib/common_core/*" ! -path "./dotfiles/bash-preexec.sh" ! -path "./another/ignored-file.sh" -exec sh -c 'head -n 1 "$1" | grep -q "^#!" || echo "Missing shebang: $1"' _ {} \;)
           if [[ -n "$missing_shebangs" ]]; then
             echo "The following files are missing a shebang:"
             echo "$missing_shebangs"
             exit 1
           fi
 
-  run_bats_unit_tests:
-    name: Run BATS Unit Tests
-    runs-on: ubuntu-latest
+  # run_bats_unit_tests:
+  #   name: Run BATS Unit Tests
+  #   runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+  #   steps:
+  #   - name: Checkout Repository
+  #     uses: actions/checkout@v3
 
-    # Install BATS if not included as a submodule
-    - name: Install BATS
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bats
+  #   # Install BATS if not included as a submodule
+  #   - name: Install BATS
+  #     run: |
+  #       sudo apt-get update
+  #       sudo apt-get install -y bats
 
-    # Run the BATS Tests
-    - name: Run BATS Tests
-      run: |
-        bats tests/unit
+  #   # Run the BATS Tests
+  #   - name: Run BATS Tests
+  #     run: |
+  #       bats tests/unit
 

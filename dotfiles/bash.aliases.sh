@@ -158,7 +158,6 @@ if [[ -z "${BASH_ALIAS_SH_LOADED:-}" ]]; then
             return 1
         fi
 
-        find . -type f -exec du -h {} + 2> /dev/null |
-            sort -hr | head -n "${count}"
+        find . -type f -exec du -h {} + 2> /dev/null | sort -hr | head -n "${count}"
     }
 fi
