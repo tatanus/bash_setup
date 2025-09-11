@@ -20,11 +20,15 @@ IFS=$'\n\t'
 #------------------------------#
 # Logging helpers
 #------------------------------#
-blue='\033[34m'; green='\033[92m'; yellow='\033[33m'; red='\033[91m'; reset='\033[0m'
-log_info()  { printf "${blue}[* INFO  ]${reset} %s\n"   "$*"; }
-log_pass()  { printf "${green}[+ PASS  ]${reset} %s\n"  "$*"; }
-log_warn()  { printf "${yellow}[! WARN  ]${reset} %s\n" "$*"; }
-log_fail()  { printf "${red}[- FAIL  ]${reset} %s\n"    "$*"; }
+blue='\033[34m'
+green='\033[92m'
+yellow='\033[33m'
+red='\033[91m'
+reset='\033[0m'
+log_info() { printf "${blue}[* INFO  ]${reset} %s\n" "$*"; }
+log_pass() { printf "${green}[+ PASS  ]${reset} %s\n" "$*"; }
+log_warn() { printf "${yellow}[! WARN  ]${reset} %s\n" "$*"; }
+log_fail() { printf "${red}[- FAIL  ]${reset} %s\n" "$*"; }
 
 trap 'log_fail "Unexpected error at ${BASH_SOURCE[0]##*/}:${LINENO}"; exit 1' ERR
 
@@ -32,10 +36,16 @@ trap 'log_fail "Unexpected error at ${BASH_SOURCE[0]##*/}:${LINENO}"; exit 1' ER
 # Utility checks
 #------------------------------#
 require_bin() {
-    command -v "$1" >/dev/null 2>&1 || { log_fail "Missing required command: $1"; exit 1; }
+    command -v "$1" > /dev/null 2>&1 || {
+        log_fail "Missing required command: $1"
+        exit 1
+    }
 }
 ensure_git_repo() {
-    git rev-parse --git-dir >/dev/null 2>&1 || { log_fail "Not inside a Git repository."; exit 1; }
+    git rev-parse --git-dir > /dev/null 2>&1 || {
+        log_fail "Not inside a Git repository."
+        exit 1
+    }
 }
 
 #------------------------------#
@@ -79,7 +89,7 @@ bump_version() {
         echo "$next" > "$version_file"
         log_info "VERSION file created with initial version $next"
     else
-        current="$(<"$version_file")"
+        current="$(< "$version_file")"
         if [[ $current =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             major="${BASH_REMATCH[1]}"
             minor="${BASH_REMATCH[2]}"
@@ -147,8 +157,8 @@ main() {
             do_commit_and_push
             log_pass "Workflow 'commit' completed successfully."
             ;;
-        ""|help|-h|--help)
-            cat <<'USAGE'
+        "" | help | -h | --help)
+            cat << 'USAGE'
 Usage:
   ./compile.sh test
       - Update submodules
