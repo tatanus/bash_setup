@@ -1,0 +1,115 @@
+name: Bash Project CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint Bash Scripts with ShellCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Install ShellCheck
+      - name: Install ShellCheck
+        run: |
+          sudo apt update
+          sudo apt install -y shellcheck
+
+      # Run ShellCheck on all scripts
+      - name: Run ShellCheck
+        run: |
+          set -eo pipefail
+          find . -name "*.sh" ! -path "./.git/*" -print0 | xargs -0 shellcheck --shell=bash --external-sources -x \
+          --severity=style \
+          --exclude=SC1090,SC1091,SC2034,SC2181
+
+  format:
+    name: Check Formatting with shfmt
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Install shfmt
+      - name: Install shfmt
+        run: |
+          sudo apt update
+          sudo apt install -y shfmt
+
+      # Run shfmt to check formatting
+      - name: Run shfmt
+        run: |
+          find . -type f -name "*.sh" -print0 | xargs -0 shfmt -i 4 -ci -bn -sr -kp -ln bash -d
+
+          # Explanation of flags:
+          # ---------------------
+          # -i 4       # Indent with 4 spaces (default is 2). Ensures consistent indentation style.
+          # -ci        # Indent `case` blocks (useful for readability within `case` statements).
+          # -bn        # Keep `do`, `then`, and similar keywords on the same line as the preceding command.
+          #            # Example: `if true; then` instead of splitting to `if true; \n then`.
+          # -kp        # Preserve padding in alignment for tables or comments (helps keep things visually aligned).
+          #            # Example:
+          #            # VAR1="value1"  # aligned comment
+          #            # VAR2="value2"
+          # -ln bash   # Specify the shell dialect as `bash` (default is `posix` for maximum portability).
+          #            # Ensures proper parsing for Bash-specific features.
+          # -d         # Diff mode: Show differences between the current script formatting and the `shfmt` output.
+          #            # This is useful in CI pipelines or for dry runs to check formatting issues without modifying files.
+
+          # Notes:
+          # - Remove the `-d` flag if you want shfmt to automatically apply formatting instead of displaying diffs.
+
+  validate_permissions:
+    name: Validate File Permissions and Shebangs
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Ensure all shell scripts are executable
+      - name: Ensure Executable Permissions
+        run: |
+          find . -name "*.sh" -exec chmod +x {} \;
+
+      # Validate all scripts have a shebang
+      - name: Validate Shebangs
+        run: |
+          missing_shebangs=$(find . -name "*.sh" ! -path "./lib/common_core/*" ! -path "./another/ignored-file.sh" -exec sh -c 'head -n 1 "$1" | grep -q "^#!" || echo "Missing shebang: $1"' _ {} \;)
+          if [[ -n "$missing_shebangs" ]]; then
+            echo "The following files are missing a shebang:"
+            echo "$missing_shebangs"
+            exit 1
+          fi
+
+  run_bats_unit_tests:
+    name: Run BATS Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    # Install BATS if not included as a submodule
+    - name: Install BATS
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bats
+
+    # Run the BATS Tests
+    - name: Run BATS Tests
+      run: |
+        bats tests/unit
+
