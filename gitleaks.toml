@@ -1,0 +1,26 @@
+title = "gitleaks config for bash_setup"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Allow test fixtures and docs with placeholders"
+    files = [
+      '''^CHANGELOG\.md$''',
+      '''^LICENSE$''',
+      '''^docs/.*$''',
+    ]
+    paths = [
+      '''.*\.png$''',
+      '''.*\.jpg$''',
+      '''.*\.gif$''',
+      '''^\.?venv/.*$''',
+      '''^node_modules/.*$''',
+    ]
+    regexes = [
+      '''(?i)dummy|example|sample|placeholder|TEST_?TOKEN''',
+    ]
+
+[redact]
+  enable = true
+
