@@ -113,7 +113,7 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
         local i=0
         while kill -0 "${pid}" 2> /dev/null; do
             i=$(((i + 1) % 4))
-            local elapsed=$(($( date +%s) - start_time))
+            local elapsed=$(($(date +%s) - start_time))
             printf "\rProcessing... %s (%s seconds) " "${spin:${i}:1}" "${elapsed}"
             sleep "${delay}"
         done
@@ -123,7 +123,7 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
         fi
 
         local exit_code=$?
-        local total_time=$(($( date +%s) - start_time))
+        local total_time=$(($(date +%s) - start_time))
 
         if [[ ${exit_code} -eq 0 ]]; then
             pass "Processing... Done! (${total_time}s)"
@@ -156,8 +156,8 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
             return 1
         fi
 
-        ((percent > 100))   && percent=100
-        ((percent < 0))   && percent=0
+        ((percent > 100)) && percent=100
+        ((percent < 0)) && percent=0
 
         local filled=$((percent * width / 100))
         local empty=$((width - filled))
@@ -226,7 +226,7 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
         info "Running: ${cmd}"
         eval "${cmd}"
         local exit_code=$?
-        local elapsed=$(($( date +%s) - start_time))
+        local elapsed=$(($(date +%s) - start_time))
         if [[ ${exit_code} -eq 0 ]]; then
             pass "Command finished in ${elapsed}s"
         else

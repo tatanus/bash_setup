@@ -82,10 +82,10 @@ if [[ -z "${BASH_PROMPT_SH_LOADED:-}" ]]; then
         # Build PS1 incrementally with sections
         # -------------------------------------------------------------------------
         PS1="\n\[${white}\]┏━"
-        PS1+="$(check_git 2> /dev/null)" # GIT STATUS
-        PS1+="$(check_session 2> /dev/null)" # SCREEN SESSION STATUS
+        PS1+="$(check_git 2> /dev/null)"         # GIT STATUS
+        PS1+="$(check_session 2> /dev/null)"     # SCREEN SESSION STATUS
         PS1+="$(check_kerb_ccache 2> /dev/null)" # KERBEROS CREDENTIAL CACHE
-        PS1+="$(check_venv 2> /dev/null)" # PYTHON VENV
+        PS1+="$(check_venv 2> /dev/null)"        # PYTHON VENV
         PS1+="\[${white}\]["
 
         # Date & time

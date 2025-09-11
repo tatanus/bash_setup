@@ -2,7 +2,7 @@
 set -uo pipefail
 
 # =============================================================================
-# NAME        : init_tasks.sh
+# NAME        : menu_tasks.sh
 # DESCRIPTION :
 # AUTHOR      : Adam Compton
 # DATE CREATED: 2024-12-10 12:29:41
@@ -14,8 +14,8 @@ set -uo pipefail
 # =============================================================================
 
 # Guard to prevent multiple sourcing
-if [[ -z "${BASH_SETUP_INIT_TASKS_SH_LOADED:-}" ]]; then
-    declare -g BASH_SETUP_INIT_TASKS_LOADED=true
+if [[ -z "${BASH_SETUP_MENU_TASKS_SH_LOADED:-}" ]]; then
+    declare -g BASH_SETUP_MENU_TASKS_LOADED=true
 
     # -----------------------------------------------------------------------------
     # ---------------------------------- INIT SETUP -------------------------------
@@ -24,8 +24,10 @@ if [[ -z "${BASH_SETUP_INIT_TASKS_SH_LOADED:-}" ]]; then
     # Function to configure dotfiles
     # This function backs up existing dotfiles and replaces them with new ones from a designated directory.
     function Setup_Dot_Files() {
+        Setup_Bash_Directories
+
         # Ensure the source directory exists
-        local src_dir="${SCRIPT_DIR}/dot"
+        local src_dir="${SCRIPT_DIR}/dotfiles"
         if [[ ! -d "${src_dir}" ]]; then
             fail "Directory [${src_dir}] does not exist."
             return "${_FAIL}"
@@ -33,26 +35,18 @@ if [[ -z "${BASH_SETUP_INIT_TASKS_SH_LOADED:-}" ]]; then
 
         for file in "${COMMON_DOT_FILES[@]}"; do
             local target="${HOME}/.${file}"
-            local source="dot/${file}"
+            local source_file="dotfiles/${file}"
 
             # Copy the new file from the dot directory
-            if copy_file "${source}" "${target}"; then
-                pass "Copied ${source} to ${target}."
-            else
-                fail "Failed to copy ${source} to ${target}."
-            fi
+            copy_file "${source_file}" "${target}"
         done
 
         for file in "${BASH_DOT_FILES[@]}"; do
             local target="${BASH_DIR}/${file}"
-            local source="dot/${file}"
+            local source_file="dotfiles/${file}"
 
             # Copy the new file from the dot directory
-            if copy_file "${source}" "${target}"; then
-                pass "Copied ${source} to ${target}."
-            else
-                fail "Failed to copy ${source} to ${target}."
-            fi
+            copy_file "${source_file}" "${target}"
         done
 
         # Source the new bashrc

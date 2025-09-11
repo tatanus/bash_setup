@@ -116,8 +116,8 @@ declare -a preexec_functions
 # name passed as $1
 __bp_trim_whitespace() {
     local var=${1:?} text=${2:-}
-    text="${text#"${text%%[![:space:]]*}"}"   # remove leading whitespace characters
-    text="${text%"${text##*[![:space:]]}"}"   # remove trailing whitespace characters
+    text="${text#"${text%%[![:space:]]*}"}" # remove leading whitespace characters
+    text="${text%"${text##*[![:space:]]}"}" # remove trailing whitespace characters
     printf -v "$var" '%s' "$text"
 }
 
@@ -242,7 +242,7 @@ __bp_preexec_invoke_exec() {
         fi
     fi
 
-    if  __bp_in_prompt_command "${BASH_COMMAND:-}"; then
+    if __bp_in_prompt_command "${BASH_COMMAND:-}"; then
         # If we're executing something inside our prompt_command then we don't
         # want to call preexec. Bash prior to 3.1 can't detect this at all :/
         __bp_preexec_interactive_mode=""
@@ -328,8 +328,8 @@ __bp_install() {
     existing_prompt_command="${PROMPT_COMMAND:-}"
     # Edge case of appending to PROMPT_COMMAND
     existing_prompt_command="${existing_prompt_command//$__bp_install_string/:}" # no-op
-    existing_prompt_command="${existing_prompt_command//$'\n':$'\n'/$'\n'}" # remove known-token only
-    existing_prompt_command="${existing_prompt_command//$'\n':;/$'\n'}" # remove known-token only
+    existing_prompt_command="${existing_prompt_command//$'\n':$'\n'/$'\n'}"      # remove known-token only
+    existing_prompt_command="${existing_prompt_command//$'\n':;/$'\n'}"          # remove known-token only
     __bp_sanitize_string existing_prompt_command "$existing_prompt_command"
     if [[ "${existing_prompt_command:-:}" == ":" ]]; then
         existing_prompt_command=

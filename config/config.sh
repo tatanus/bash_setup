@@ -21,12 +21,12 @@ if [[ -z "${CONFIG_SH_LOADED:-}" ]]; then
     # GLOBAL SETTINGS
     # =============================================================================
 
-    export DEBUG=false                  # Enable debug mode (true/false)
-    export NO_DISPLAY=false             # Suppress display outputs (true/false)
-    export _PASS=0                      # Success return code
-    export _FAIL=1                      # Failure return code
+    export DEBUG=false      # Enable debug mode (true/false)
+    export NO_DISPLAY=false # Suppress display outputs (true/false)
+    export _PASS=0          # Success return code
+    export _FAIL=1          # Failure return code
 
-    export INTERACTIVE_MENU=false       # Enable interactive menus (true/false)
+    export INTERACTIVE_MENU=false # Enable interactive menus (true/false)
 
     # =============================================================================
     # BASH CONFIGURATION DIRECTORIES

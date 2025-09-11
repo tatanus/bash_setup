@@ -285,10 +285,10 @@ if [[ -z "${BASH_PROMPT_FUNCS_SH_LOADED:-}" ]]; then
                         config=$(grep -A3 "${interface}:" "${config_file}" 2> /dev/null || true)
                         if echo "${config}" | grep -q "dhcp4: true"; then
                             printf "%s\n" "DHCP"
-                                                  return 0
+                            return 0
                         elif echo "${config}" | grep -q "addresses:"; then
                             printf "%s\n" "Static"
-                                                    return 0
+                            return 0
                         fi
                     fi
                 fi
@@ -299,10 +299,10 @@ if [[ -z "${BASH_PROMPT_FUNCS_SH_LOADED:-}" ]]; then
                     config=$(grep -A3 "iface ${interface}" /etc/network/interfaces 2> /dev/null || true)
                     if echo "${config}" | grep -q "dhcp"; then
                         printf "%s\n" "DHCP"
-                                              return 0
+                        return 0
                     elif echo "${config}" | grep -q "static"; then
                         printf "%s\n" "Static"
-                                                return 0
+                        return 0
                     fi
                 fi
 
@@ -332,19 +332,19 @@ if [[ -z "${BASH_PROMPT_FUNCS_SH_LOADED:-}" ]]; then
                         [[ -z "${config}" ]] && return 1
                         if echo "${config}" | grep -q "DHCP Configuration"; then
                             printf "%s\n" "DHCP"
-                                                  return 0
+                            return 0
                         elif echo "${config}" | grep -q "Manually configured"; then
                             printf "%s\n" "Static"
-                                                    return 0
+                            return 0
                         else
                             printf "%s\n" "Unknown"
-                                                     return 1
+                            return 1
                         fi
                     fi
                 done <<< "${resulting_list}"
 
                 printf "%s\n" "Unknown"
-                                         return 1
+                return 1
                 ;;
             *)
                 return 1

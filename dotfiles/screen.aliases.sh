@@ -170,7 +170,7 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         for child in "${children[@]}"; do
             find_leaves "${child}"
             if [[ ${#commands[@]} -gt 0 ]]; then
-                 "WINDOW ${window_index}: ${commands[*]}"
+                "WINDOW ${window_index}: ${commands[*]}"
                 ((window_index++))
                 commands=() # Reset commands for the next window
             fi
@@ -213,10 +213,10 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         # shellcheck disable=SC2016
         selected_session=$(
             printf "%s\n" "${session_list[@]}" | fzf \
-                    --prompt="Select a screen session: " \
-                    --no-clear \
-                    --preview 'bash -c "echo \"== Commands for Screen Session -- $(echo {1}) ==\"; echo; _get_pid_commands $(echo {1} | cut -d . -f 1)"' \
-                    --preview-window=down:10:wrap:sharp
+                --prompt="Select a screen session: " \
+                --no-clear \
+                --preview 'bash -c "echo \"== Commands for Screen Session -- $(echo {1}) ==\"; echo; _get_pid_commands $(echo {1} | cut -d . -f 1)"' \
+                --preview-window=down:10:wrap:sharp
         )
 
         # Handle the case where no session was selected

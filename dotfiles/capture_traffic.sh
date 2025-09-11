@@ -21,9 +21,9 @@ if [[ -z "${CAPTURETRAFFIC_SH_LOADED:-}" ]]; then
     # Configuration and Defaults
     # =============================================================================
 
-    DEFAULT_CAPTURE_TIME=10       # Default capture time in seconds
-    DEFAULT_MAX_MESSAGES=100      # Default maximum number of messages to capture
-    DEFAULT_INTERFACE="any"       # Default capture interface
+    DEFAULT_CAPTURE_TIME=10  # Default capture time in seconds
+    DEFAULT_MAX_MESSAGES=100 # Default maximum number of messages to capture
+    DEFAULT_INTERFACE="any"  # Default capture interface
     TSHARK_CMD=$(command -v tshark)
 
     # =============================================================================

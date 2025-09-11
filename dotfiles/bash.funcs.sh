@@ -218,8 +218,8 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
             return 0
         fi
         [[ -f /etc/os-release ]] || {
-                                      echo ""
-                                               return 0
+            echo ""
+            return 0
         }
         grep -oP 'VERSION_ID="\K[^"]+' /etc/os-release || true
     }
@@ -313,9 +313,9 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
         read -n 1 -s -r
         if command -v tput &> /dev/null; then
             tput cuu 3
-                        tput el
-                                 tput el
-                                          tput el
+            tput el
+            tput el
+            tput el
         fi
     }
 

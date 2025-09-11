@@ -58,17 +58,17 @@ else
 fi
 
 function _Pause() {
-    if [[ -t 0 ]]; then  # check if running interactively
+    if [[ -t 0 ]]; then # check if running interactively
         echo
         echo "-----------------------------------"
         read -n 1 -s -r -p "Press any key to continue..."
-        echo  # Move to the next line after key press
+        echo # Move to the next line after key press
 
         # Use ANSI escape codes to move the cursor up and clear lines
-        tput cuu 3   # Move the cursor up 3 lines
-        tput el      # Clear the current line
-        tput el      # Clear the next line
-        tput el      # Clear the third line
+        tput cuu 3 # Move the cursor up 3 lines
+        tput el    # Clear the current line
+        tput el    # Clear the next line
+        tput el    # Clear the third line
     fi
 }
 
@@ -133,12 +133,84 @@ fi
 declare -a REQUIRED_FILES=(
     "${SCRIPT_DIR}/config/config.sh"
     "${SCRIPT_DIR}/config/lists.sh"
-    "${SCRIPT_DIR}/lib/common_core/logger.sh"
-    "${SCRIPT_DIR}/lib/common_core/utils.sh"
-    "${SCRIPT_DIR}/lib/common_core/menu.sh"
-    "${SCRIPT_DIR}/lib/common_core/safe_source.sh"
+    "${SCRIPT_DIR}/lib/common_core/lib/utils.sh"
+    "${SCRIPT_DIR}/lib/common_core/lib/menu.sh"
     "${SCRIPT_DIR}/menu/menu_tasks.sh"
 )
+
+# Source required files and verify their existence
+for file in "${REQUIRED_FILES[@]}"; do
+    if [[ -f "${file}" ]]; then
+        # Source the file if it exists
+        source "${file}" || {
+            echo "Failed to source file: ${file}. Exiting."
+            exit 1
+        }
+    else
+        # Log an error if the file is missing
+        echo "Required file is missing: ${file}. Exiting."
+        exit 1
+    fi
+done
+
+# -----------------------------------------------------------------------------
+# ---------------------------------- UTILITY ----------------------------------
+# -----------------------------------------------------------------------------
+
+###############################################################################
+# ensure_command
+#==============================
+# Checks whether a given command is installed and functional.
+# Prompts the user to install it if missing.
+#————————————————————
+# Usage:
+#   ensure_command <command_name>
+#
+# Arguments:
+#   command_name → Name of the binary/command to check and install if missing
+#
+# Return Values:
+#   0 → Command exists or installed successfully
+#   non-zero → User declined install or install failed
+#————————————————————
+# Requirements:
+#   check_command
+#   _install_package
+#   info, warn, fail functions
+#   OS_NAME variable
+###############################################################################
+function ensure_command() {
+    local cmd="$1"
+
+    if [[ -z "${cmd}" ]]; then
+        fail "No command name provided to ensure_command."
+        return "${_FAIL}"
+    fi
+
+    if ! check_command "${cmd}"; then
+        read -r -p "Command '${cmd}' not found. Do you want to install it? (Y/n): " answer
+
+        # Default to 'Y' if user just hits Enter
+        answer="${answer:-Y}"
+
+        case "${answer}" in
+            [Yy]*)
+                _install_package "${cmd}"
+                return $?
+                ;;
+            [Nn]*)
+                warn "${cmd} will not be installed. Exiting."
+                exit "${_FAIL}"
+                ;;
+            *)
+                fail "Invalid response. Exiting."
+                exit "${_FAIL}"
+                ;;
+        esac
+    else
+        info "Command '${cmd}' is already installed."
+    fi
+}
 
 # -----------------------------------------------------------------------------
 # ---------------------------------- MAIN -------------------------------------
@@ -148,7 +220,8 @@ function main() {
     # Check if any arguments are passed
     if [[ $# -eq 0 ]]; then
         # No arguments, display the menu
-        _Display_Menu "BASH SETUP" "_Process_Start_Menu" false "${SETUP_MENU_ITEMS[@]}"
+        _display_menu "Setup BASH Environment" "_exec_function" true "${BASH_ENVIRONMENT_MENU_ITEMS[@]}"
+
         return
     fi
 
@@ -175,8 +248,6 @@ ensure_command "fzf"
 ensure_command "eza"
 ensure_command "ncat"
 ensure_command "bat"
-ensure_command "proxychains"
-ensure_command "proxychains4"
 
 # Call the main function, passing all script arguments
 main "$@"
