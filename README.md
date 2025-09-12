@@ -18,11 +18,13 @@
 - Integrates **CI** (ShellCheck), **formatting** (shfmt), and basic **tests** (BATS)
 
 ## Submodules
+## Submodules
 <!-- SUBMODULES-LIST:START -->
 
 * [lib/common_core](https://github.com/tatanus/common_core.git)
 
 <!-- SUBMODULES-LIST:END -->
+
 
 
 
