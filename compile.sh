@@ -94,8 +94,15 @@ update_readme_submodules() {
         printf '# Project\n\n' > "${readme}"
     fi
 
+    # Only include the "## Submodules" header if README does not already have it.
+    local header_prefix=''
+    if ! grep -qE '^##[[:space:]]+Submodules[[:space:]]*$' "${readme}"; then
+        header_prefix='## Submodules\n'
+    fi
+
     local block tmpblock
-    printf -v block '## Submodules\n%s\n\n%b\n%s\n' "${mark_start}" "${list_content}" "${mark_end}"
+    # Build the replacement block: [optional header] + markers + list
+    printf -v block '%s%s\n\n%b\n%s\n' "${header_prefix}" "${mark_start}" "${list_content}" "${mark_end}"
     tmpblock=$(mktemp)
     printf '%s\n' "${block}" > "${tmpblock}"
 

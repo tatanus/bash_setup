@@ -1,42 +1,64 @@
 # git-cliff configuration for bash_setup
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+tag_pattern = "v[0-9].*"
+
 [changelog]
-# Write in Keep a Changelog style
-header = "# Changelog\nAll notable changes to this project will be documented in this file.\n"
+header = """
+# Changelog
+All notable changes to this project will be documented in this file.
+"""
 body = """
 {% if version %}## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}{% else %}## [Unreleased]{% endif %}
-{% if commits | filter(attribute="scope") | length > 0 -%}
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group | upper_first }}
 {% for commit in commits -%}
-- {{ commit.message | split(pat="\n") | first | trim }}{% if commit.breaking %} **(BREAKING)**{% endif %}
+- {{ commit.message | split(pat="\\n") | first | trim }}{% if commit.breaking %} **(BREAKING)**{% endif %}{% if commit.scope %} ({{ commit.scope }}){% endif %}
 {% endfor %}
 {% endfor %}
-{% else -%}
-- Minor internal changes.
-{% endif %}
 """
-trim = true
 footer = ""
 
-[git]
-# Tags format: vX.Y.Z
-tag_pattern = "v[0-9]*"
-# What to include in the log
-commit_preprocessors = [
-  { pattern = "^(feat)(\\(.*\\))?!?:", replace = "Added:" },
-  { pattern = "^(fix)(\\(.*\\))?!?:",  replace = "Fixed:" },
-  { pattern = "^(chore)(\\(.*\\))?:", replace = "Chore:" },
-  { pattern = "^(docs)(\\(.*\\))?:",  replace = "Docs:" },
-  { pattern = "^(refactor)(\\(.*\\))?:", replace = "Changed:" },
-  { pattern = "^(perf)(\\(.*\\))?:",  replace = "Performance:" }
-]
-# Map to groups in the template
-commit_parsers = [
-  { message = "^Added:",      group = "Added" },
-  { message = "^Fixed:",      group = "Fixed" },
-  { message = "^Changed:",    group = "Changed" },
-  { message = "^Docs:",       group = "Docs" },
-  { message = "^Performance:",group = "Performance" },
-  { message = "^Chore:",      group = "Chore" },
-]
+# Map conventional commit types to Keep a Changelog-style groups
+[[commit_parsers]]
+message = '^feat(\(.*\))?:'
+group = 'Added'
 
+[[commit_parsers]]
+message = '^fix(\(.*\))?:'
+group = 'Fixed'
+
+[[commit_parsers]]
+message = '^refactor(\(.*\))?:'
+group = 'Changed'
+
+[[commit_parsers]]
+message = '^perf(\(.*\))?:'
+group = 'Performance'
+
+[[commit_parsers]]
+message = '^docs(\(.*\))?:'
+group = 'Docs'
+
+[[commit_parsers]]
+message = '^build(\(.*\))?:'
+group = 'Build'
+
+[[commit_parsers]]
+message = '^ci(\(.*\))?:'
+group = 'CI'
+
+[[commit_parsers]]
+message = '^chore(\(.*\))?:'
+group = 'Chore'
+
+[[commit_parsers]]
+message = '^revert(\(.*\))?:'
+group = 'Reverted'
+
+# Fallback: put anything else under "Misc"
+[[commit_parsers]]
+message = '.*'
+group = 'Misc'

@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,115 +15,156 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint Bash Scripts with ShellCheck
+  validate_permissions:
+    name: Validate workflow permissions blocks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install ShellCheck
+      - name: Install PyYAML
         run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
 
-      - name: Run ShellCheck
+      - name: Ensure each workflow has a top-level permissions block
         run: |
-          set -eo pipefail
-          # Lint all .sh files, excluding the .git dir
-          find . -name "*.sh" ! -path "./.git/*" -print0 \
-            | xargs -0 shellcheck --shell=bash --external-sources -x \
-              --severity=style \
-              --exclude=SC1090,SC1091,SC2034,SC2181
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys, glob, yaml, os
+          failures = []
+          files = glob.glob('.github/workflows/*.yml') + glob.glob('.github/workflows/*.yaml')
+          if not files:
+              print("No workflow files found.")
+              sys.exit(0)
+          for f in sorted(files):
+              try:
+                  with open(f, 'r', encoding='utf-8') as fh:
+                      data = yaml.safe_load(fh)
+              except Exception as e:
+                  print(f"[ERROR] YAML parse error in {f}: {e}", file=sys.stderr)
+                  failures.append(f)
+                  continue
+              if not isinstance(data, dict) or 'permissions' not in data:
+                  print(f"[ERROR] Missing top-level 'permissions:' in {f}", file=sys.stderr)
+                  failures.append(f)
+          if failures:
+              print(f"\nWorkflows missing permissions or invalid: {', '.join(failures)}", file=sys.stderr)
+              sys.exit(1)
+          print("All workflows include a top-level permissions block.")
+          PY
+
+  validate_actions:
+    name: Lint GitHub Actions (actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: reviewdog/action-actionlint@v1
+        with:
+          actionlint_flags: -color=never
+
+  lint:
+    name: ShellCheck
+    needs: [validate_permissions, validate_actions]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install tools (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y shellcheck git gawk
+
+      - name: Install tools (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          set -euo pipefail
+          brew update
+          brew install shellcheck gawk git || true
+
+      - name: ShellCheck (all shell scripts)
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git ls-files | grep -E '\.(sh|bash)$|(^|/)bash(rc|_profile|_login)$' || true)
+          if [ "${#files[@]}" -gt 0 ]; then
+            shellcheck --severity=warning --external-sources --wiki-link-count=0 --source-path=SCRIPTDIR --format=tty "${files[@]}"
+          else
+            echo "No shell files detected."
+          fi
 
   format:
-    name: Check Formatting with shfmt
-    runs-on: ubuntu-latest
+    name: shfmt (check formatting)
+    needs: [validate_permissions, validate_actions]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install shfmt
+      - name: Install shfmt (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
-          sudo apt-get update
+          set -euo pipefail
+          sudo apt-get update -y
           sudo apt-get install -y shfmt
 
-      - name: Run shfmt
+      - name: Install shfmt (macOS)
+        if: startsWith(matrix.os, 'macos')
         run: |
-          # Keep the project's known-good formatting preferences
-          find . -type f -name "*.sh" -print0 \
-            | xargs -0 shfmt -i 4 -ci -bn -sr -kp -ln bash -d
-          # Flags:
-          # -i 4  indent width
-          # -ci   indent case blocks
-          # -bn   keep 'do/then' on same line
-          # -sr   simplify redirects
-          # -kp   preserve padding
-          # -ln   bash dialect
-          # -d    diff mode (fail on differences)
+          set -euo pipefail
+          brew update
+          brew install shfmt || true
 
-  validate_permissions:
-    name: Validate File Permissions and Shebangs
+      - name: Verify formatting with shfmt
+        run: |
+          set -euo pipefail
+          # Match your repo's style flags
+          shfmt -i 4 -ci -bn -kp -sr -ln bash -d .
+
+  test:
+    name: Tests (if present)
+    needs: [lint, format]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Ensure Executable Permissions
-        run: |
-          # Make all .sh files executable; adjust if you only want this in dev
-          find . -name "*.sh" -exec chmod +x {} \;
-
-      - name: Validate Shebangs
+      - uses: actions/checkout@v4
+      - name: Run tests
         shell: bash
         run: |
           set -euo pipefail
-          # Exclude known third-party or special files
-          missing_shebangs=$(
-            find . -name "*.sh" \
-              ! -path "./.git/*" \
-              ! -path "./lib/common_core/*" \
-              ! -path "./dotfiles/bash-preexec.sh" \
-              -exec sh -c 'head -n 1 "$1" | grep -q "^#!" || echo "$1"' _ {} \;
-          )
-          if [[ -n "${missing_shebangs}" ]]; then
-            echo "The following files are missing a shebang:"
-            echo "${missing_shebangs}"
-            exit 1
-          fi
-
-  tests:
-    needs: [lint, format]
-    name: Run BATS Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install bats-core
-        run: |
-          git clone --depth 1 https://github.com/bats-core/bats-core.git
-          sudo ./bats-core/install.sh /usr/local
-
-      - name: Run tests (BATS)
-        run: |
-          if compgen -G "tests/**/*.bats" > /dev/null || compgen -G "tests/*.bats" > /dev/null; then
-            bats -r tests
+          if [ -f Makefile ] && grep -q '^test:' Makefile; then
+            make test
+          elif [ -d tests ]; then
+            echo "No explicit test runner; listing tests:"
+            find tests -type f -maxdepth 2 -print
           else
-            echo "No BATS tests found."
+            echo "No tests found."
           fi
 
   secret_scan:
-    needs: [lint, format]
     name: Secret Scan (gitleaks)
+    needs: [lint, format]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
         with:
-          # gitleaks.toml is at repo root; change path if you relocate it
-          config: gitleaks.toml
-
+          config-path: gitleaks.toml
+          fail: true

@@ -1,16 +1,28 @@
 name: Submodules Refresh
+
 on:
-  schedule: [{ cron: '0 6 * * 1' }]
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { submodules: recursive }
-      - run: |
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update submodules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git submodule sync --recursive
           git submodule update --remote --recursive
           if git status --porcelain | grep -q .; then
             git add -A
@@ -18,10 +30,12 @@ jobs:
           else
             echo "No submodule updates."
           fi
-      - uses: peter-evans/create-pull-request@v6
+
+      - name: Open PR if changes
+        uses: peter-evans/create-pull-request@v6
         with:
           title: "chore: refresh submodules"
           branch: chore/refresh-submodules
           commit-message: "chore: refresh submodules"
-          labels: chore,automation
-
+          labels: chore, automation
+          delete-branch: true

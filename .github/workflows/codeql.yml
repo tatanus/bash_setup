@@ -18,70 +18,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  detect-languages:
-    name: Detect languages
-    runs-on: ubuntu-latest
-    outputs:
-      langs: ${{ steps.set.outputs.langs }}
-      has_lang: ${{ steps.set.outputs.has_lang }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Detect CodeQL-supported languages
-        id: set
-        shell: bash
-        run: |
-          set -euo pipefail
-          files="$(git ls-files)"
-          langs=()
-
-          has() { echo "$files" | grep -E -q "$1"; }
-
-          has '\.py$'       && langs+=("python")
-          has '\.(js|ts)$'  && langs+=("javascript")
-          has '\.go$'       && langs+=("go")
-          has '\.java$'     && langs+=("java")
-          has '\.(kt|kts)$' && langs+=("java")   # Kotlin runs under Java CodeQL
-          has '\.rb$'       && langs+=("ruby")
-          has '\.(c|cc|cpp|cxx|h|hpp)$' && langs+=("cpp")
-          has '\.cs$'       && langs+=("csharp")
-          has '\.swift$'    && langs+=("swift")
-
-          # de-dup
-          uniq_langs=()
-          for l in "${langs[@]:-}"; do
-            [[ " ${uniq_langs[*]-} " == *" $l "* ]] || uniq_langs+=("$l")
-          done
-
-          if [[ ${#uniq_langs[@]} -eq 0 ]]; then
-            echo "langs=[]" >> "$GITHUB_OUTPUT"
-            echo "has_lang=false" >> "$GITHUB_OUTPUT"
-          else
-            json="["
-            for i in "${!uniq_langs[@]}"; do
-              [[ $i -gt 0 ]] && json+=", "
-              json+="\"${uniq_langs[$i]}\""
-            done
-            json+="]"
-            echo "Detected languages: $json"
-            echo "langs=$json" >> "$GITHUB_OUTPUT"
-            echo "has_lang=true" >> "$GITHUB_OUTPUT"
-          fi
-
   analyze:
-    name: Analyze (${{ matrix.language }})
-    needs: detect-languages
-    if: needs.detect-languages.outputs.has_lang == 'true'
+    name: Analyze
     runs-on: ubuntu-latest
-
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        language: ${{ fromJSON(needs.detect-languages.outputs.langs) }}
-
+        # Bash isn’t supported by CodeQL; include common aux languages if present
+        language: [ 'javascript', 'python' ]
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
