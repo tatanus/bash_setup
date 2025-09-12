@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner (audit egress)
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Verify tag/version/changelog (light guard)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/v}"
+          echo "Verifying against tag: $tag"
+
+          # 1) VERSION must equal tag (X.Y.Z)
+          [[ -f VERSION ]] || { echo "::error::Missing VERSION file"; exit 1; }
+          ssot="$(sed -n '1{s/^[[:space:]]*//;p;q}' VERSION)"
+          echo "VERSION=$ssot"
+          [[ "$ssot" == "$tag" ]] || { echo "::error::VERSION ($ssot) != tag ($tag)"; exit 1; }
+
+          # 2) CITATION.cff version/date (optional but recommended)
+          if [[ -f CITATION.cff ]]; then
+            cit_ver="$(awk -F': ' '/^version:/{gsub(/"/,"",$2); print $2; exit}' CITATION.cff)"
+            cit_date="$(awk -F': ' '/^date-released:/{gsub(/"/,"",$2); print $2; exit}' CITATION.cff)"
+            echo "CITATION: version=$cit_ver date-released=$cit_date"
+            [[ "$cit_ver" == "$tag" ]] || { echo "::error::CITATION.cff version ($cit_ver) != tag ($tag)"; exit 1; }
+            [[ "$cit_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "::error::Invalid CITATION.cff date-released: $cit_date"; exit 1; }
+            today="$(date +%F)"
+            [[ "$cit_date" > "$today" ]] && { echo "::error::CITATION date is in the future ($cit_date)"; exit 1; }
+          else
+            echo "CITATION.cff not found; continuing."
+          fi
+
+          # 3) CHANGELOG has section for tag
+          chlog="docs/CHANGELOG.md"
+          [[ -f "$chlog" ]] || { echo "::error::Missing $chlog"; exit 1; }
+          grep -qE "^## \\[$tag\\]" "$chlog" || { echo "::error::CHANGELOG lacks section for [$tag]"; exit 1; }
+          echo "CHANGELOG has section for [$tag]"
+
+      - name: Ensure submodules are initialized and at recorded commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f .gitmodules ]]; then
+            git submodule sync --recursive
+            git submodule update --init --recursive
+            echo "Submodule status:"
+            git submodule status --recursive
+            bad="$(git submodule status --recursive | grep -E '^[+-]|^U' || true)"
+            if [[ -n "$bad" ]]; then
+              echo "::error::Submodule(s) not at expected state:"
+              echo "$bad"
+              exit 1
+            fi
+          else
+            echo "No .gitmodules present."
+          fi
+
+      - name: Build release tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF#refs/tags/v}"
+          name="bash_setup-${ver}"
+          mkdir -p "dist/${name}"
+
+          # Core runtime
+          cp -a SetupBash.sh dotfiles config menu lib "dist/${name}/"
+
+          # Optional docs & licensing (best-effort)
+          [[ -f README.md ]] && cp README.md "dist/${name}/"
+          if [[ -f LICENSE ]]; then
+            cp LICENSE "dist/${name}/"
+          elif [[ -f .github/LICENSE ]]; then
+            cp .github/LICENSE "dist/${name}/LICENSE"
+          fi
+
+          # Traceability
+          cp VERSION "dist/${name}/"
+          [[ -f CITATION.cff ]] && cp CITATION.cff "dist/${name}/"
+
+          # Package
+          tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+          sha256sum "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256"
+
+      - name: Extract release notes from docs/CHANGELOG.md
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF#refs/tags/v}"
+          awk -v pat="^## \\["ver"\\]" '
+            $0 ~ pat {p=1; print; next}
+            /^## \[/ && p==1 {exit}
+            p==1 {print}
+          ' docs/CHANGELOG.md > RELEASE_NOTES.md
+          # If empty, fall back to a default
+          if ! [ -s RELEASE_NOTES.md ]; then
+            printf "## [%s]\n\n_No changelog entry found._\n" "$ver" > RELEASE_NOTES.md
+          fi
+          echo "tag=${ver}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.notes.outputs.tag }}
+          name: bash_setup v${{ steps.notes.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/bash_setup-${{ steps.notes.outputs.tag }}.tar.gz
+            dist/bash_setup-${{ steps.notes.outputs.tag }}.tar.gz.sha256
+
+

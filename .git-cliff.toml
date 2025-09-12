@@ -1,0 +1,42 @@
+# git-cliff configuration for bash_setup
+[changelog]
+# Write in Keep a Changelog style
+header = "# Changelog\nAll notable changes to this project will be documented in this file.\n"
+body = """
+{% if version %}## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}{% else %}## [Unreleased]{% endif %}
+{% if commits | filter(attribute="scope") | length > 0 -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits -%}
+- {{ commit.message | split(pat="\n") | first | trim }}{% if commit.breaking %} **(BREAKING)**{% endif %}
+{% endfor %}
+{% endfor %}
+{% else -%}
+- Minor internal changes.
+{% endif %}
+"""
+trim = true
+footer = ""
+
+[git]
+# Tags format: vX.Y.Z
+tag_pattern = "v[0-9]*"
+# What to include in the log
+commit_preprocessors = [
+  { pattern = "^(feat)(\\(.*\\))?!?:", replace = "Added:" },
+  { pattern = "^(fix)(\\(.*\\))?!?:",  replace = "Fixed:" },
+  { pattern = "^(chore)(\\(.*\\))?:", replace = "Chore:" },
+  { pattern = "^(docs)(\\(.*\\))?:",  replace = "Docs:" },
+  { pattern = "^(refactor)(\\(.*\\))?:", replace = "Changed:" },
+  { pattern = "^(perf)(\\(.*\\))?:",  replace = "Performance:" }
+]
+# Map to groups in the template
+commit_parsers = [
+  { message = "^Added:",      group = "Added" },
+  { message = "^Fixed:",      group = "Fixed" },
+  { message = "^Changed:",    group = "Changed" },
+  { message = "^Docs:",       group = "Docs" },
+  { message = "^Performance:",group = "Performance" },
+  { message = "^Chore:",      group = "Chore" },
+]
+

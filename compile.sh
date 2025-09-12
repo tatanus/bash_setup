@@ -10,10 +10,10 @@
 #                  - release  : update submodules, run CI, run tests,
 #                               refresh README submodules section,
 #                               set VERSION to X.Y.Z (or auto-bump patch),
-#                               update CITATION.cff + docs/CHANGELOG.md,
+#                               update CITATION.cff + docs/CHANGELOG.md
+#                               (via git-cliff if available),
 #                               commit, tag vX.Y.Z, and push (with tags)
 ###############################################################################
-# Strict mode
 set -Eeuo pipefail
 IFS=$'\n\t'
 
@@ -32,14 +32,6 @@ log_fail() { printf '%b[- FAIL  ]%b %s\n' "${red}" "${reset}" "$*"; }
 trap 'log_fail "Unexpected error at ${BASH_SOURCE[0]##*/}:${LINENO}"; exit 1' ERR
 
 #=============================== Prerequisites ================================#
-###############################################################################
-# require_bin
-#==============================
-# Ensure a required executable exists in PATH.
-#————————————————————
-# Usage:
-#   require_bin <bin>
-###############################################################################
 require_bin() {
     if ! command -v "${1}" > /dev/null 2>&1; then
         log_fail "Missing required command: ${1}"
@@ -47,11 +39,6 @@ require_bin() {
     fi
 }
 
-###############################################################################
-# ensure_git_repo
-#==============================
-# Ensure we are inside a Git repository.
-###############################################################################
 ensure_git_repo() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         log_fail "Not inside a Git repository."
@@ -60,19 +47,12 @@ ensure_git_repo() {
 }
 
 #========================== README submodules block ===========================#
-###############################################################################
-# update_readme_submodules
-#==============================
-# Renders a stable "Submodules" list block in README.md between markers:
-# <!-- SUBMODULES-LIST:START --> ... <!-- SUBMODULES-LIST:END -->
-###############################################################################
 update_readme_submodules() {
     local -r readme='README.md'
     local -r mark_start='<!-- SUBMODULES-LIST:START -->'
     local -r mark_end='<!-- SUBMODULES-LIST:END -->'
 
     _normalize_url() {
-        # Normalize common SSH forms to HTTPS for consistent links
         local url
         url=${1:-}
         if [[ ${url} =~ ^git@([^:]+):(.+)$ ]]; then
@@ -91,7 +71,6 @@ update_readme_submodules() {
         return 0
     fi
 
-    # Collect submodule paths (unique & sorted for stable output)
     local -a paths=()
     # shellcheck disable=SC2016
     while IFS= read -r line; do
@@ -110,19 +89,16 @@ update_readme_submodules() {
         done
     fi
 
-    # Ensure README exists
     if [[ ! -f ${readme} ]]; then
         log_warn 'README.md not found; creating one.'
         printf '# Project\n\n' > "${readme}"
     fi
 
-    # Build replacement block and write to a temp file (avoid awk -v multiline)
     local block tmpblock
     printf -v block '## Submodules\n%s\n\n%b\n%s\n' "${mark_start}" "${list_content}" "${mark_end}"
     tmpblock=$(mktemp)
     printf '%s\n' "${block}" > "${tmpblock}"
 
-    # Replace or append block atomically, reading content from tmp file
     if grep -qF "${mark_start}" "${readme}"; then
         awk -v start="${mark_start}" -v end="${mark_end}" -v newfile="${tmpblock}" '
             BEGIN { in_block=0 }
@@ -152,11 +128,6 @@ update_readme_submodules() {
 }
 
 #=============================== CI/Test steps ================================#
-###############################################################################
-# update_submodules
-#==============================
-# Initialize/sync/update submodules using Makefile targets.
-###############################################################################
 update_submodules() {
     log_info 'Updating submodules (init + sync + recursive update)...'
     make submodules-init
@@ -164,22 +135,12 @@ update_submodules() {
     log_pass 'Submodules updated.'
 }
 
-###############################################################################
-# run_ci
-#==============================
-# Run project CI via Makefile (format + lint + tests hooks as defined).
-###############################################################################
 run_ci() {
     log_info 'Running CI (format + lint + tests)...'
     make ci
     log_pass 'CI completed.'
 }
 
-###############################################################################
-# run_tests
-#==============================
-# Run explicit test suite (BATS, etc.) via Makefile.
-###############################################################################
 run_tests() {
     log_info 'Running test suite...'
     make test
@@ -187,35 +148,18 @@ run_tests() {
 }
 
 #=========================== Versioning & releasing ===========================#
-###############################################################################
-# read_version
-#==============================
-# Read current version from VERSION (first non-empty line).
-# Returns via stdout.
-###############################################################################
 read_version() {
     if [[ -f VERSION ]]; then
         sed -n '1{s/^[[:space:]]*//;p;q}' VERSION
     fi
 }
 
-###############################################################################
-# write_version
-#==============================
-# Overwrite VERSION with provided SemVer string.
-###############################################################################
 write_version() {
     local ver="${1:?missing version}"
     printf '%s\n' "${ver}" > VERSION
     git add VERSION
 }
 
-###############################################################################
-# bump_patch_version
-#==============================
-# If VERSION exists and is SemVer, bump patch; else initialize to 0.1.0.
-# Returns new version via stdout and stages VERSION.
-###############################################################################
 bump_patch_version() {
     local current next major minor patch
     if [[ -f VERSION ]]; then
@@ -238,20 +182,10 @@ bump_patch_version() {
     printf '%s' "${next}"
 }
 
-###############################################################################
-# validate_semver
-#==============================
-# Validate X.Y.Z format; returns 0 if valid, 1 otherwise.
-###############################################################################
 validate_semver() {
     [[ "${1-}" =~ ^[0-9]+(\.[0-9]+){2}$ ]]
 }
 
-###############################################################################
-# update_citation_for_release
-#==============================
-# Update CITATION.cff's version and date-released to match provided version.
-###############################################################################
 update_citation_for_release() {
     local ver="${1:?missing version}" d tmp
     d="$(date +%F)"
@@ -283,12 +217,6 @@ update_citation_for_release() {
     log_info "CITATION.cff updated to ${ver} (${d})."
 }
 
-###############################################################################
-# update_changelog_for_release
-#==============================
-# Ensure docs/CHANGELOG.md has a section for the provided version under
-# "Unreleased". If missing, insert "## [X.Y.Z] - YYYY-MM-DD" with a stub.
-###############################################################################
 update_changelog_for_release() {
     local ver="${1:?missing version}" d chlog tmp
     d="$(date +%F)"
@@ -296,6 +224,7 @@ update_changelog_for_release() {
 
     if [[ ! -f "${chlog}" ]]; then
         log_warn "Missing ${chlog}; creating a fresh changelog."
+        mkdir -p docs
         cat > "${chlog}" << EOF
 # Changelog
 All notable changes to this project will be documented in this file.
@@ -318,7 +247,6 @@ EOF
 
     tmp="$(mktemp)"
     if grep -qE '^## \[Unreleased\]' "${chlog}"; then
-        # Insert new version block right after Unreleased
         awk -v ver="${ver}" -v d="${d}" '
           BEGIN{done=0}
           {
@@ -334,7 +262,6 @@ EOF
           }
         ' "${chlog}" > "${tmp}" && mv "${tmp}" "${chlog}"
     else
-        # No Unreleased section; prepend new section
         {
             echo "## [${ver}] - ${d}"
             echo "### Added"
@@ -348,12 +275,50 @@ EOF
     log_info "Updated ${chlog} with ${ver} section."
 }
 
+#======================== Release notes / changelog ===========================#
+# Generates RELEASE_NOTES.md and updates docs/CHANGELOG.md using git-cliff.
+# Returns 0 on success, non-zero if git-cliff unavailable and could not be installed.
+generate_release_notes() {
+    local ver="${1:?missing version}"
+    require_bin git
+
+    if ! command -v git-cliff > /dev/null 2>&1; then
+        log_info "git-cliff not found; attempting quick install..."
+        if command -v apt-get > /dev/null 2>&1; then
+            # Avoid SC2015: group commands and handle failure explicitly
+            if ! (sudo apt-get update -y && sudo apt-get install -y git-cliff); then
+                log_warn "Could not install git-cliff via apt-get; continuing without it."
+            fi
+        elif command -v brew > /dev/null 2>&1; then
+            # Avoid SC2015: treat brew failure explicitly
+            if ! brew install git-cliff; then
+                log_warn "Could not install git-cliff via Homebrew; continuing without it."
+            fi
+        fi
+    fi
+
+    if ! command -v git-cliff > /dev/null 2>&1; then
+        log_warn "git-cliff still not available; skipping automated release notes."
+        return 1
+    fi
+
+    mkdir -p docs
+
+    if [[ -f .git-cliff.toml ]]; then
+        git-cliff -c .git-cliff.toml --tag "v${ver}" --prepend docs/CHANGELOG.md
+        git-cliff -c .git-cliff.toml --tag "v${ver}" --output RELEASE_NOTES.md
+    else
+        # Use git-cliff defaults (Conventional Commits)
+        git-cliff --tag "v${ver}" --prepend docs/CHANGELOG.md
+        git-cliff --tag "v${ver}" --output RELEASE_NOTES.md
+    fi
+
+    git add docs/CHANGELOG.md RELEASE_NOTES.md || true
+    log_info "Generated changelog and release notes for v${ver}."
+    return 0
+}
+
 #=============================== Commit & Push ================================#
-###############################################################################
-# prompt_commit_msg
-#==============================
-# Interactive prompt for a commit message (non-empty).
-###############################################################################
 prompt_commit_msg() {
     local msg
     printf '\n'
@@ -365,11 +330,6 @@ prompt_commit_msg() {
     printf '%s' "${msg}"
 }
 
-###############################################################################
-# do_commit_and_push
-#==============================
-# Shared "commit" flow (interactive message; auto patch bump).
-###############################################################################
 do_commit_and_push() {
     ensure_git_repo
     update_readme_submodules
@@ -396,32 +356,19 @@ do_commit_and_push() {
     log_pass "Push complete (version ${new_ver})."
 }
 
-###############################################################################
-# do_release
-#==============================
-# Non-interactive release flow:
-# - update submodules, CI, tests
-# - refresh README submodules
-# - set version to X.Y.Z (arg) or auto patch bump
-# - update CITATION.cff + docs/CHANGELOG.md
-# - commit "chore(release): vX.Y.Z"
-# - create annotated tag vX.Y.Z and push (with tags)
-#
+#================================= Release ===================================#
 # Usage:
-#   ./compile.sh release                # auto-bump patch
-#   ./compile.sh release 1.2.3          # set exact version
-###############################################################################
+#   ./compile.sh release          # auto-bump patch
+#   ./compile.sh release 1.2.3    # set exact version
 do_release() {
     ensure_git_repo
 
-    # Refresh README submodules BEFORE staging
     update_readme_submodules
     git add -A
 
     local new_ver
     if [[ $# -ge 1 ]]; then
         local req_ver="$1"
-        # Run validation outside of the conditional to keep set -e behavior intact (SC2310)
         validate_semver "${req_ver}"
         if [[ $? -ne 0 ]]; then
             log_fail "Invalid SemVer: ${req_ver} (expected X.Y.Z)"
@@ -435,11 +382,21 @@ do_release() {
         log_info "VERSION auto-bumped to ${new_ver}."
     fi
 
-    # Update citation + changelog for this release
     update_citation_for_release "${new_ver}"
-    update_changelog_for_release "${new_ver}"
 
-    # Stage everything (README/VERSION/CITATION/CHANGELOG/etc.)
+    # Prefer git-cliff for notes/changelog; fall back to stub updater if unavailable
+    # Avoid SC2310: don't invoke the function in a conditional (||/!/&&).
+    gen_rc=0
+    set +e
+    generate_release_notes "${new_ver}"
+    gen_rc=$?
+    set -e
+    if [[ "${gen_rc}" -ne 0 ]]; then
+        update_changelog_for_release "${new_ver}"
+    else
+        log_info "Release notes/changelog generated via git-cliff."
+    fi
+
     git add -A
 
     if git diff --cached --quiet; then
@@ -449,7 +406,6 @@ do_release() {
         log_info "Committed release v${new_ver}."
     fi
 
-    # Tag (idempotent if tag exists we warn and skip)
     if git rev-parse "v${new_ver}" > /dev/null 2>&1; then
         log_warn "Tag v${new_ver} already exists; skipping tag creation."
     else
@@ -457,7 +413,6 @@ do_release() {
         log_info "Created tag v${new_ver}."
     fi
 
-    # Push code + tags
     log_info 'Pushing branch and tags...'
     git push
     git push --tags
@@ -527,7 +482,8 @@ Usage:
       - Refresh README Submodules block (idempotent)
       - Set VERSION to X.Y.Z (or auto-bump patch if omitted)
       - Update CITATION.cff (version/date-released)
-      - Update docs/CHANGELOG.md (new section for X.Y.Z)
+      - Generate RELEASE_NOTES.md and update docs/CHANGELOG.md via git-cliff (if available)
+      - Fallback: update docs/CHANGELOG.md with a stub section
       - Git commit "chore(release): vX.Y.Z"
       - Create annotated tag vX.Y.Z
       - Push branch and tags
