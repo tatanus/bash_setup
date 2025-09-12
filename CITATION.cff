@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "bash_setup"
 abstract: "Opinionated Bash-based setup tooling with tests, linting, and CI for consistent developer environments."
-version: "0.1.0"
+version: "0.9.0"
 date-released: "2025-09-11"
 authors:
   - given-names: "Adam"
