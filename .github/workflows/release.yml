@@ -25,7 +25,7 @@ jobs:
 
       - name: Generate release notes with git-cliff
         id: cliff
-        uses: orhun/git-cliff-action@v2
+        uses: orhun/git-cliff-action@v4
         with:
           config: .git-cliff.toml
           args: --tag ${{ github.ref_name }}
