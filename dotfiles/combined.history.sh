@@ -359,10 +359,30 @@ EOF
         fi
     }
 
+    ###############################################################################
+    # sanitize_log_string
+    #------------------------------------------------------------------------------
+    # Purpose  : Sanitize a string before writing to log files to prevent broken
+    #            log formats caused by quotes, control characters, etc.
+    # Arguments:
+    #   $1 : Raw input string
+    # Outputs : Safe string for logging (stdout)
+    # Returns : 0
+    ###############################################################################
+    function sanitize_log_string() {
+        local raw="${1:-}"
+        # Escape backslashes first, then double quotes
+        # Remove control characters (non-printable except tab/newline)
+        printf '%s' "${raw}" \
+            | sed -E 's/\\/\\\\/g; s/"/\\"/g; s/[\x00-\x1F\x7F]//g'
+    }
+
     # Write a log line to the main history file (and optional extra file)
     function write_log_entry() {
         local log_line="$1"
         local extra_file="${2:-}"
+
+        log_line="$(sanitize_log_string "${log_line}")"
 
         write_to_syslog "${log_line}"
 
