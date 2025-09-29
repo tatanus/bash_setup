@@ -237,21 +237,34 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
 
     ###############################################################################
     # strip_color
-    #==============================
-    # Removes ANSI color and control sequences from text or file.
+    #------------------------------------------------------------------------------
+    # Purpose  : Remove ANSI color codes and control/non-printable characters
+    # Usage    : strip_color "string" | strip_color /path/to/file
+    # Arguments:
+    #   $1 : Either a string or a file path
+    # Returns  : Cleaned text on stdout
+    # Globals  : error (logging function must exist)
     ###############################################################################
     function strip_color() {
-        if [[ -z "$1" ]]; then
+        if [[ -z "${1:-}" ]]; then
             error "No input provided to strip_color"
             return 1
         fi
+
         local ansi=$'\x1B\\[[0-9;]*[mK]'
         local control=$'[[:cntrl:]]'
         local nonprintable=$'[\x80-\xFF]'
+
         if [[ -f "$1" ]]; then
-            LANG=C sed -E -e "s/${ansi}//g" -e "s/${control}//g" -e "s/${nonprintable}//g" "$1"
+            LANG=C sed -E \
+                -e "s/${ansi}//g" \
+                -e "s/${control}//g" \
+                -e "s/${nonprintable}//g" "$1"
         else
-            echo -e "$1" | LANG=C sed -E -e "s/${ansi}//g" -e "s/${control}//g" -e "s/${nonprintable}//g"
+            printf '%s\n' "$1" | LANG=C sed -E \
+                -e "s/${ansi}//g" \
+                -e "s/${control}//g" \
+                -e "s/${nonprintable}//g"
         fi
     }
 fi

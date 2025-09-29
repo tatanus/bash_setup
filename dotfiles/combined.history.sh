@@ -371,10 +371,13 @@ EOF
     ###############################################################################
     function sanitize_log_string() {
         local raw="${1:-}"
-        # Escape backslashes first, then double quotes
-        # Remove control characters (non-printable except tab/newline)
         printf '%s' "${raw}" \
-            | sed -E 's/\\/\\\\/g; s/"/\\"/g; s/[\x00-\x1F\x7F]//g'
+            | sed -E '
+            s/\\/\\\\/g;      # escape backslashes
+            s/"/\\"/g;        # escape double quotes
+            s/\$/\\$/g;       # escape $ to prevent expansion
+            s/[\x00-\x1F\x7F]//g  # strip control chars
+        '
     }
 
     # Write a log line to the main history file (and optional extra file)

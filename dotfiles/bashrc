@@ -8,6 +8,7 @@
 # DATE                 | EDITED BY    | DESCRIPTION OF CHANGE
 # ---------------------|--------------|----------------------------------------
 # 2025-06-09 08:34:00  | Adam Compton | Initial creation.
+# 2025-09-22 12:00:00  | Adam Compton | Hardened for safety and non-interactive
 # =============================================================================
 
 ###############################################################################
@@ -20,11 +21,44 @@ set -uo pipefail
 #trap 'echo "[$(date +"%F %T")] ERROR on line $LINENO"; exit 1' ERR
 
 ###############################################################################
-# INTERACTIVITY CHECK
+# NON-INTERACTIVE SAFETY
 ###############################################################################
+# Ensure scripts are safe, even when sourced
+# - Globs that don’t match expand to nothing instead of themselves
+# - Allow extended globbing
+# - Globs include dotfiles (hidden files)
+shopt -s dotglob nullglob extglob
+
 if [[ -z "${PS1:-}" ]]; then
+    # Non-interactive shell: exit early to avoid interactive-only features
     return
 fi
+
+###############################################################################
+# SHELL OPTIONS
+###############################################################################
+# Correct minor spelling errors in 'cd' arguments
+shopt -s cdspell
+
+# Update LINES and COLUMNS after each command if terminal resized
+shopt -s checkwinsize
+
+# Globs that don’t match expand to nothing instead of themselves
+shopt -s nullglob
+
+# Globs include dotfiles (hidden files)
+shopt -s dotglob
+
+# Save multi-line commands as one history entry
+shopt -s cmdhist
+
+# Append to history file instead of overwriting
+shopt -s histappend
+
+# Bash >= 4 enhancements (ignore errors on older versions)
+shopt -s autocd   2>/dev/null || true   # Allow typing dir name instead of 'cd dir'
+shopt -s dirspell 2>/dev/null || true   # Correct directory spellings in general
+shopt -s globstar 2>/dev/null || true   # Enable recursive globbing with **
 
 ###############################################################################
 # SETTING ANY REQUIRED ENV
@@ -98,9 +132,6 @@ fi
 # Silence bash deprecation warning
 export BASH_SILENCE_DEPRECATION_WARNING=1
 
-# Check window size after each command and update LINES and COLUMNS if necessary
-shopt -s checkwinsize
-
 # Make less more friendly for non-text input files
 if command -v lesspipe &>/dev/null; then
     eval "$(SHELL=/bin/sh lesspipe)"
@@ -113,36 +144,6 @@ fi
 if [[ -z "${debian_chroot:-}" ]] && [[ -r /etc/debian_chroot ]]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
-
-# ###############################################################################
-# # HISTORY SETUP (custom...  disabled for now)
-# ###############################################################################
-# timestamp=$(date +"%Y%m%d_%H%M%S")
-# window="${WINDOW:-win}"
-# session_tag=""
-# 
-# # Unique HISTFILE per screen or tmux session
-# if [[ -n "${TMUX:-}" ]]; then
-#     session_name=$(tmux display-message -p '#S' 2>/dev/null || echo "tmux_${timestamp}")
-#     session_tag="tmux_${session_name}_${window}"
-# elif [[ -n "${STY:-}" ]]; then
-#     session_name=$(echo "$STY" | cut -d. -f2)
-#     session_tag="screen_${session_name:-$$}_${window}"
-# else
-#     session_tag="bash"
-# fi
-# 
-# export HISTFILE="$HOME/.bash_history_${session_tag}"
-# export HISTCONTROL=
-# export HISTIGNORE=
-# export HISTSIZE=100000
-# export HISTFILESIZE=100000
-# export HISTTIMEFORMAT="[%m/%d/%y %H:%M:%S] "
-# shopt -s histappend
-# 
-# if [[ ! -f "${HISTFILE}" ]]; then
-#     touch "${HISTFILE}" && chmod 600 "${HISTFILE}"
-# fi
 
 ###############################################################################
 # DEFAULT BASH HISTORY CONFIGURATION

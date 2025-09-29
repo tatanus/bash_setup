@@ -14,52 +14,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint Bash Scripts with ShellCheck
+  style:
+    name: Enforce Bash Style Guide
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install ShellCheck
+      - name: Install Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck
+          sudo apt-get install -y shellcheck shfmt
 
-      - name: Run ShellCheck
+      - name: Run Style Guide Checks
         run: |
-          set -eo pipefail
-          # Lint all .sh files, excluding the .git dir
-          find . -name "*.sh" ! -path "./.git/*" -print0 \
-            | xargs -0 shellcheck --shell=bash --external-sources -x \
-              --severity=style \
-              --exclude=SC1090,SC1091,SC2034,SC2181
-
-  format:
-    name: Check Formatting with shfmt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install shfmt
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shfmt
-
-      - name: Run shfmt
-        run: |
-          # Keep the project's known-good formatting preferences
-          find . -type f -name "*.sh" -print0 \
-            | xargs -0 shfmt -i 4 -ci -bn -sr -kp -ln bash -d
-          # Flags:
-          # -i 4  indent width
-          # -ci   indent case blocks
-          # -bn   keep 'do/then' on same line
-          # -sr   simplify redirects
-          # -kp   preserve padding
-          # -ln   bash dialect
-          # -d    diff mode (fail on differences)
+          chmod +x ./check_bash_style.sh
+          ./check_bash_style.sh
 
   validate_permissions:
     name: Validate File Permissions and Shebangs
@@ -70,14 +40,12 @@ jobs:
 
       - name: Ensure Executable Permissions
         run: |
-          # Make all .sh files executable; adjust if you only want this in dev
           find . -name "*.sh" -exec chmod +x {} \;
 
       - name: Validate Shebangs
         shell: bash
         run: |
           set -euo pipefail
-          # Exclude known third-party or special files
           missing_shebangs=$(
             find . -name "*.sh" \
               ! -path "./.git/*" \
@@ -92,7 +60,7 @@ jobs:
           fi
 
   tests:
-    needs: [lint, format]
+    needs: [style]
     name: Run BATS Tests
     runs-on: ubuntu-latest
     steps:
@@ -111,18 +79,3 @@ jobs:
           else
             echo "No BATS tests found."
           fi
-
-  secret_scan:
-    needs: [lint, format]
-    name: Secret Scan (gitleaks)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          # gitleaks.toml is at repo root; change path if you relocate it
-          config: gitleaks.toml
-

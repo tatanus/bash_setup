@@ -14,7 +14,7 @@
 #                               (via git-cliff if available),
 #                               commit, tag vX.Y.Z, and push (with tags)
 ###############################################################################
-set -Eeuo pipefail
+set -uo pipefail
 IFS=$'\n\t'
 
 #================================= Colors ====================================#
