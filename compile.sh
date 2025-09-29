@@ -397,7 +397,6 @@ do_release() {
     set +e
     generate_release_notes "${new_ver}"
     gen_rc=$?
-    set -e
     if [[ "${gen_rc}" -ne 0 ]]; then
         update_changelog_for_release "${new_ver}"
     else
