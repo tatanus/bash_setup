@@ -19,7 +19,8 @@ function error() { printf '[ERROR] %s\n' "${1}" >&2; }
 ###############################################################################
 function run_shellcheck() {
     info "Running ShellCheck..."
-    if ! find . -type f -name "*.sh" -print0 | xargs -0 shellcheck --shell=bash --rcfile="${SHELLCHECK_RC}"; then
+    if ! find . -type f -name "*.sh" -print0 \
+        | xargs -0 shellcheck --shell=bash --rcfile="${SHELLCHECK_RC}"; then
         error "ShellCheck failed"
         STYLE_FAIL=1
     fi
@@ -30,7 +31,8 @@ function run_shellcheck() {
 ###############################################################################
 function run_shfmt() {
     info "Checking formatting with shfmt..."
-    if ! find . -type f -name "*.sh" -print0 | xargs -0 shfmt -d -i 4 -ci -bn -kp -sr -ln bash; then
+    if ! find . -type f -name "*.sh" -print0 \
+        | xargs -0 shfmt -d -i 4 -ci -bn -kp -sr -ln bash; then
         error "shfmt reported formatting issues"
         STYLE_FAIL=1
     fi
@@ -39,34 +41,42 @@ function run_shfmt() {
 ###############################################################################
 # run_custom_checks
 ###############################################################################
+###############################################################################
+# run_custom_checks
+###############################################################################
 function run_custom_checks() {
     info "Running custom regex style checks..."
 
-    # Ban set -e / errexit (skip comments and this script)
+    # Helper: filter out comment lines while keeping filename:line prefix
+    # Example grep output: ./file.sh:123:    # comment
+    # awk splits on ":", checks $3 (the code), and skips if it starts with "#"
+    local awk_filter="{ code=\$0; sub(/^[^:]+:[0-9]+:/,\"\",code); if (code !~ /^[[:space:]]*#/) print \$0 }"
+
+    # Ban set -e / errexit
     if grep -rn --include="*.sh" -E "set[[:space:]]+-?(e|eu)|set -o errexit" . \
-        | grep -vE '^\s*#' | grep -v "check_bash_style.sh"; then
+        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed use of 'set -e'"
         STYLE_FAIL=1
     fi
 
-    # Ban echo -e (skip comments and this script)
-    if grep -rn --include="*.sh" -E "^\s*echo -e" . \
-        | grep -vE '^\s*#' | grep -v "check_bash_style.sh"; then
+    # Ban echo -e
+    if grep -rn --include="*.sh" -E "echo[[:space:]]+-e" . \
+        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed 'echo -e'"
         STYLE_FAIL=1
     fi
 
-    # Ban backticks (skip comments and this script)
+    # Ban backticks
     if grep -rn --include="*.sh" '`' . \
-        | grep -vE '^\s*#' | grep -v "check_bash_style.sh"; then
+        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed backticks (use \$(...) instead)"
         STYLE_FAIL=1
     fi
 
-    # Ban for f in $(ls) (skip comments and this script)
+    # Ban for f in $(ls)
     if grep -rn --include="*.sh" -E "for[[:space:]]+f[[:space:]]+in[[:space:]]+\$\\(ls" . \
-        | grep -vE '^\s*#' | grep -v "check_bash_style.sh"; then
-        error "Found disallowed 'for f in $(ls)'"
+        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
+        error "Found disallowed 'for f in \$(ls)'"
         STYLE_FAIL=1
     fi
 }
