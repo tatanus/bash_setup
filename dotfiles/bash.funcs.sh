@@ -390,6 +390,7 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
                     error "Invalid option: -${OPTARG}"
                     return "${FAIL}"
                     ;;
+                *)  ;;
             esac
         done
         shift $((OPTIND - 1))
@@ -439,6 +440,7 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
                         clipboard_source="xclip -selection clipboard -o"
                     fi
                     ;;
+                *)  ;;
             esac
 
             if [[ -z "${clipboard_source}" ]]; then

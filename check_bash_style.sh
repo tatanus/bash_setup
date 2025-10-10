@@ -11,6 +11,7 @@ STYLE_FAIL=0
 
 function info()  { printf '[INFO ] %s\n' "${1}"; }
 # shellcheck disable=SC2317
+# shellcheck disable=SC2329
 function warn()  { printf '[WARN ] %s\n' "${1}"; }
 function error() { printf '[ERROR] %s\n' "${1}" >&2; }
 

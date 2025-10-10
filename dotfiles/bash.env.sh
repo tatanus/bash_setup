@@ -21,8 +21,8 @@ if [[ -z "${BASH_ENV_SH_LOADED:-}" ]]; then
     export DEBUG=true
 
     # pass/fail/true/fall variables
-    export _PASS=0
-    export _FAIL=1
+    export PASS=0
+    export FAIL=1
 
     # define default editor
     export EDITOR="vim"
