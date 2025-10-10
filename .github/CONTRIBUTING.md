@@ -1,6 +1,6 @@
-# Contributing to BASH
+# Contributing
 
-Welcome to the **BASH** project! We're excited to have you contribute. Whether you're fixing a bug, improving documentation, or proposing a new feature, your contributions are greatly appreciated. Follow the guidelines below to ensure a smooth and productive collaboration.
+Welcome to the project! We're excited to have you contribute. Whether you're fixing a bug, improving documentation, or proposing a new feature, your contributions are greatly appreciated. Follow the guidelines below to ensure a smooth and productive collaboration.
 
 ---
 

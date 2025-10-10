@@ -170,7 +170,7 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         for child in "${children[@]}"; do
             find_leaves "${child}"
             if [[ ${#commands[@]} -gt 0 ]]; then
-                "WINDOW ${window_index}: ${commands[*]}"
+                printf 'WINDOW %d: %s\n' "${window_index}" "${commands[*]}"
                 ((window_index++))
                 commands=() # Reset commands for the next window
             fi

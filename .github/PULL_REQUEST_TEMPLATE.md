@@ -56,7 +56,7 @@ Please complete the checklist below to ensure your PR meets the project standard
   ```bash
   shfmt -i 4 -ci -bn -kp -sr -ln bash -d .
   ```
-- [ ] I have verified that my changes are consistent with the project's [Style Guide](./STYLEGUIDE.md).
+- [ ] I have verified that my changes are consistent with the project's [Style Guide](https://github.com/tatanus/bash_style_guide).
 - [ ] I have updated or added relevant tests (e.g., unit tests, test scripts).
 - [ ] All existing tests pass successfully after my changes.
 - [ ] I have added or updated documentation as needed, and linked any relevant PRs in related repositories (e.g., documentation or tools).
