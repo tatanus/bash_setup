@@ -23,14 +23,15 @@ jobs:
 
       - name: Install Tools
         run: |
+          sudo snap install shellcheck --classic
           sudo apt-get update
-          sudo apt-get install -y shellcheck shfmt
+          sudo apt-get install -y shfmt
 
       - name: Run Style Guide Checks
         run: |
           chmod +x ./check_bash_style.sh
           ./check_bash_style.sh
-
+ 
   validate_permissions:
     name: Validate File Permissions and Shebangs
     runs-on: ubuntu-latest
