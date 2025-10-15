@@ -30,7 +30,7 @@ if [[ -z "${BASH_SETUP_MENU_TASKS_SH_LOADED:-}" ]]; then
         local src_dir="${SCRIPT_DIR}/dotfiles"
         if [[ ! -d "${src_dir}" ]]; then
             fail "Directory [${src_dir}] does not exist."
-            return "${_FAIL}"
+            return "${FAIL}"
         fi
 
         for file in "${COMMON_DOT_FILES[@]}"; do
@@ -52,10 +52,10 @@ if [[ -z "${BASH_SETUP_MENU_TASKS_SH_LOADED:-}" ]]; then
         # Source the new bashrc
         if source "${HOME}/.bashrc"; then
             pass "Sourced new ${HOME}/.bashrc."
-            return "${_PASS}"
+            return "${PASS}"
         else
             fail "Failed to source ${HOME}/.bashrc."
-            return "${_FAIL}"
+            return "${FAIL}"
         fi
     }
 
@@ -100,7 +100,7 @@ if [[ -z "${BASH_SETUP_MENU_TASKS_SH_LOADED:-}" ]]; then
         # Ensure the directories array is defined
         if [[ -z "${REQUIRED_BASH_DIRECTORIES+x}" ]]; then
             fail "Directories array is not defined."
-            return "${_FAIL}"
+            return "${FAIL}"
         fi
 
         # Create directories

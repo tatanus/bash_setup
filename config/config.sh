@@ -23,8 +23,8 @@ if [[ -z "${CONFIG_SH_LOADED:-}" ]]; then
 
     export DEBUG=false      # Enable debug mode (true/false)
     export NO_DISPLAY=false # Suppress display outputs (true/false)
-    export _PASS=0          # Success return code
-    export _FAIL=1          # Failure return code
+    export PASS=0          # Success return code
+    export FAIL=1          # Failure return code
 
     export INTERACTIVE_MENU=false # Enable interactive menus (true/false)
 
@@ -40,7 +40,7 @@ if [[ -z "${CONFIG_SH_LOADED:-}" ]]; then
         if [[ ! -d "${dir}" ]]; then
             mkdir -p "${dir}" || {
                 echo "Failed to create directory: ${dir}" >&2
-                exit "${_FAIL}"
+                exit "${FAIL}"
             }
             printf "[* INFO  ] Created directory: %s\n" "${dir}"
         fi
@@ -61,7 +61,7 @@ if [[ -z "${CONFIG_SH_LOADED:-}" ]]; then
         if [[ ! -f "${file}" ]]; then
             touch "${file}" || {
                 echo "Failed to create file: ${file}" >&2
-                exit "${_FAIL}"
+                exit "${FAIL}"
             }
         fi
     done
