@@ -73,6 +73,13 @@ if [[ -z "${BASH_ALIAS_SH_LOADED:-}" ]]; then
             alias ls='convert_ls_to_eza'
             debug "Alias set: ls -> convert_ls_to_eza"
         fi
+    else
+        # Enable color support of ls
+        if ls --color=auto &> /dev/null; then
+            alias ls='ls -p --color=auto'
+        else
+            alias ls='ls -p'
+        fi
     fi
 
     ###############################################################################
