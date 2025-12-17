@@ -71,6 +71,16 @@ else
 fi
 
 # =============================================================================
+# Fallback logging if logger not provided
+# =============================================================================
+if ! declare -f info  > /dev/null; then function info() { printf '[* INFO  ] %s\n' "${1}"; }; fi
+if ! declare -f warn  > /dev/null; then function warn() { printf '[! WARN  ] %s\n' "${1}" >&2; }; fi
+if ! declare -f error > /dev/null; then function error() { printf '[- ERROR ] %s\n' "${1}" >&2; }; fi
+if ! declare -f pass  > /dev/null; then function pass() { printf '[+ PASS  ] %s\n' "${1}"; }; fi
+if ! declare -f fail  > /dev/null; then function fail() { printf '[! FAIL  ] %s\n' "${1}" >&2; }; fi
+if ! declare -f debug > /dev/null; then function debug() { printf '[# DEBUG ] %s\n' "${1}"; }; fi
+
+# =============================================================================
 # Enable strict error handling
 #
 # -u → error on unset variables
