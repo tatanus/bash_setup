@@ -4,14 +4,51 @@
 # NAME        : combined.history.sh
 # DESCRIPTION : Logs commands in Bash and Zsh interactive shells.
 #               Also includes trace_run for logging entire script executions.
+#               Version 2 - Security hardened and performance optimized
 # AUTHOR      : Adam Compton
 # DATE CREATED: 2025-07-04
+# VERSION     : 2.0.0
+# =============================================================================
+# PLATFORM COMPATIBILITY:
+#   - Bash 4.2+ on Linux, macOS, WSL2
+#   - Zsh 5.0+ on Linux, macOS, WSL2
+#
+# PLATFORM-SPECIFIC NOTES:
+#   macOS:
+#     - flock is NOT available by default (falls back to basic_lock)
+#     - For better performance: brew install flock
+#     - All other functionality works natively
+#
+#   WSL2:
+#     - Behaves like Linux
+#     - May need SYSLOG_ENABLED=false if syslog daemon not running
+#     - Set in environment before sourcing: export SYSLOG_ENABLED=false
+#
+#   Linux:
+#     - All features supported natively
+#     - flock available for efficient file locking
 # =============================================================================
 # EDIT HISTORY:
 # DATE                 | EDITED BY    | DESCRIPTION OF CHANGE
 # ---------------------|--------------|----------------------------------------
 # 2025-07-04           | Adam Compton | Unified Bash/Zsh version with trace_run
+# 2025-12-29           | Adam Compton | Security hardening, performance optimization,
+#                      |              | cross-platform compatibility fixes
 # =============================================================================
+
+# =============================================================================
+# Version Information
+# =============================================================================
+readonly SCRIPT_VERSION="2.0.0"
+readonly SCRIPT_NAME="combined.history.sh"
+
+# =============================================================================
+# Magic Constants
+# =============================================================================
+readonly TRACE_PREFIX="+TRACE+ "
+readonly MIN_BASH_VERSION=4
+readonly MIN_BASH_MINOR=2
+readonly MIN_ZSH_VERSION=5
 
 # =============================================================================
 # Determine how to exit this script
@@ -52,21 +89,21 @@ fi
 
 if [[ -n "${BASH_VERSION:-}" ]]; then
     # Check for minimum Bash version (4.2+ required)
-    if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2))); then
-        fail "Bash 4.2 or newer is required." >&2
+    if ((BASH_VERSINFO[0] < MIN_BASH_VERSION || (BASH_VERSINFO[0] == MIN_BASH_VERSION && BASH_VERSINFO[1] < MIN_BASH_MINOR))); then
+        printf '[! FAIL  ] Bash %d.%d or newer is required.\n' "${MIN_BASH_VERSION}" "${MIN_BASH_MINOR}" >&2
         "${EXIT_OR_RETURN}" 1
     fi
 
 elif [[ -n "${ZSH_VERSION:-}" ]]; then
     # Extract the major version safely
     zsh_major="${ZSH_VERSION%%.*}"
-    if [[ -z "${zsh_major}" ]] || ((zsh_major < 5)); then
-        fail "Zsh 5.0 or newer is required." >&2
+    if [[ -z "${zsh_major}" ]] || ((zsh_major < MIN_ZSH_VERSION)); then
+        printf '[! FAIL  ] Zsh %d.0 or newer is required.\n' "${MIN_ZSH_VERSION}" >&2
         "${EXIT_OR_RETURN}" 1
     fi
 
 else
-    fail "Unknown shell. This script supports Bash or Zsh only." >&2
+    printf '[! FAIL  ] Unknown shell. This script supports Bash or Zsh only.\n' >&2
     "${EXIT_OR_RETURN}" 1
 fi
 
@@ -92,23 +129,16 @@ if [[ -n "${BASH_VERSION:-}" ]]; then
 elif [[ -n "${ZSH_VERSION:-}" ]]; then
     # Do nothing at the moment as Oh My Zsh and plugins frequently break under
     # setopt nounset because many of them reference variables without checking
-    # if they’re defined.
+    # if they're defined.
     #
     # TODO: fix this better the future
-    if setopt | grep -q '^pipefail'; then
+    if setopt 2>&1 | grep -q '^pipefail'; then
         setopt pipefail
     else
-        warn "pipefail not supported in this Zsh version" >&2
+        warn "pipefail not supported in this Zsh version"
     fi
-
-    # # Check whether Zsh supports pipefail
-    # if setopt | grep -q '^pipefail'; then
-    #     setopt nounset pipefail
-    # else
-    #     setopt nounset
-    # fi
 else
-    warn "Unknown shell. Strict options not set." >&2
+    warn "Unknown shell. Strict options not set."
     "${EXIT_OR_RETURN}" 1
 fi
 
@@ -120,15 +150,12 @@ fi
 if [[ -z "${COMMAND_LOGGING_SH_LOADED:-}" ]]; then
     if [[ -n "${BASH_VERSION:-}" ]]; then
         declare -g COMMAND_LOGGING_SH_LOADED=true
-        # Initialize LAST_LOGGED_COMMAND to avoid duplicates
         declare -g LAST_LOGGED_COMMAND=""
     elif [[ -n "${ZSH_VERSION:-}" ]]; then
         typeset -g COMMAND_LOGGING_SH_LOADED=true
-        # Initialize LAST_LOGGED_COMMAND to avoid duplicates
         typeset -g LAST_LOGGED_COMMAND=""
     else
         COMMAND_LOGGING_SH_LOADED=true
-        # Initialize LAST_LOGGED_COMMAND to avoid duplicates
         LAST_LOGGED_COMMAND=""
     fi
 
@@ -147,7 +174,7 @@ if [[ -z "${COMMAND_LOGGING_SH_LOADED:-}" ]]; then
 
     lock_dir="$(dirname "${LOCK_FILE}")"
     if [[ ! -w "${lock_dir}" ]]; then
-        fail "Lock file directory not writable: ${lock_dir}" >&2
+        fail "Lock file directory not writable: ${lock_dir}"
         "${EXIT_OR_RETURN}" 1
     fi
 
@@ -163,15 +190,6 @@ if [[ -z "${COMMAND_LOGGING_SH_LOADED:-}" ]]; then
 
     # Path where logrotate configs are stored (default for most distros)
     LOGROTATE_DIR="/etc/logrotate.d"
-    # /etc/logrotate.d/combined_history.log {
-    #     rotate 10
-    #     weekly
-    #     size 10M
-    #     compress
-    #     missingok
-    #     notifempty
-    #     create 0600 root root
-    # }
 
     # Maximum size of combined history log (in bytes) before rotating
     LOGROTATE_ROTATE_SIZE="10M"
@@ -180,10 +198,10 @@ if [[ -z "${COMMAND_LOGGING_SH_LOADED:-}" ]]; then
     LOGROTATE_ROTATE_COUNT=10
 
     # Enable duplicate command suppression
-    SUPPRESS_DUPLICATES=true
+    SUPPRESS_DUPLICATES=false
 
     # Enable syslog integration
-    SYSLOG_ENABLED=true
+    SYSLOG_ENABLED=false
 
     # Syslog facility to use
     SYSLOG_FACILITY="local1"
@@ -195,28 +213,92 @@ if [[ -z "${COMMAND_LOGGING_SH_LOADED:-}" ]]; then
     RUN_LOGGING_SELFTEST="${RUN_LOGGING_SELFTEST:-false}"
 
     # =============================================================================
-    # Sanity Checks
+    # Cleanup Handler
     # =============================================================================
 
-    # Automatically create a logrotate config
+    ###############################################################################
+    # cleanup_on_exit
+    #------------------------------------------------------------------------------
+    # Purpose  : Clean up lock files and other resources on shell exit
+    # Arguments: None
+    # Outputs  : None
+    # Returns  : 0
+    ###############################################################################
+    function cleanup_on_exit() {
+        # Only clean up if the lock file belongs to this process
+        if [[ -f "${LOCK_FILE}" ]]; then
+            local lock_pid
+            lock_pid=$(cat "${LOCK_FILE}" 2> /dev/null || echo "")
+            if [[ "${lock_pid}" == "$$" ]]; then
+                rm -f "${LOCK_FILE}" 2> /dev/null || true
+            fi
+        fi
+    }
+
+    # Set up cleanup traps for EXIT, SIGINT, and SIGTERM
+    # This ensures lock files are cleaned up even if the shell is interrupted
+    if [[ -n "${BASH_VERSION:-}" ]]; then
+        trap cleanup_on_exit EXIT INT TERM
+    elif [[ -n "${ZSH_VERSION:-}" ]]; then
+        trap cleanup_on_exit EXIT INT TERM
+    fi
+
+    # =============================================================================
+    # Utility Functions
+    # =============================================================================
+
+    ###############################################################################
+    # check_logrotate_config
+    #------------------------------------------------------------------------------
+    # Purpose  : Check if a logrotate config exists for the given log file
+    # Arguments:
+    #   $1 : Log file path
+    # Outputs  : None
+    # Returns  : 0 if config exists, 1 otherwise
+    ###############################################################################
+    function check_logrotate_config() {
+        local log_file="$1"
+        grep -q "${log_file}" /etc/logrotate.conf "${LOGROTATE_DIR}"/* 2> /dev/null
+        return $?
+    }
+
+    ###############################################################################
+    # auto_setup_logrotate
+    #------------------------------------------------------------------------------
+    # Purpose  : Automatically create a logrotate config for the log file
+    # Arguments:
+    #   $1 : Log file path
+    # Outputs  : Status messages to stdout/stderr
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function auto_setup_logrotate() {
         local log_file="$1"
         local config_file
+        local tmp_config
+
         config_file="${LOGROTATE_DIR}/$(basename "${log_file}").logrotate"
 
         if [[ ! -d "${LOGROTATE_DIR}" ]]; then
-            warn "logrotate directory ${LOGROTATE_DIR} does not exist. Cannot auto-setup logrotate." >&2
+            warn "logrotate directory ${LOGROTATE_DIR} does not exist. Cannot auto-setup logrotate."
             return 1
         fi
 
         # Check if a config already exists
-        if grep -q "${log_file}" /etc/logrotate.conf "${LOGROTATE_DIR}"/* 2> /dev/null; then
+        if check_logrotate_config "${log_file}"; then
             return 0
         fi
 
-        echo "Auto-setup: Creating logrotate config ${config_file} for ${log_file}..."
+        info "Auto-setup: Creating logrotate config ${config_file} for ${log_file}..."
 
-        cat << EOF > "${config_file}"
+        # Create temp file securely (cross-platform compatible)
+        # Use -t for macOS compatibility
+        tmp_config=$(mktemp -t "$(basename "${config_file}").XXXXXX") || {
+            fail "Failed to create temporary file for logrotate config"
+            return 1
+        }
+
+        # Write config to temp file
+        cat > "${tmp_config}" << EOF
 ${log_file} {
     rotate ${LOGROTATE_ROTATE_COUNT}
     size ${LOGROTATE_ROTATE_SIZE}
@@ -227,18 +309,30 @@ ${log_file} {
 }
 EOF
 
-        chmod 644 "${config_file}" || {
-            fail "Failed to set permissions on logrotate config ${config_file}" >&2
+        # Atomically move temp file to final location
+        if mv "${tmp_config}" "${config_file}" 2> /dev/null; then
+            chmod 644 "${config_file}" || {
+                fail "Failed to set permissions on logrotate config ${config_file}"
+                rm -f "${config_file}"
+                return 1
+            }
+            info "Logrotate configuration created at ${config_file}"
+            return 0
+        else
+            rm -f "${tmp_config}"
+            fail "Failed to create logrotate config at ${config_file}"
             return 1
-        }
-
-        echo "Logrotate configuration created at ${config_file}"
+        fi
     }
+
+    # =============================================================================
+    # Sanity Checks
+    # =============================================================================
 
     if [[ "${USE_LOGROTATE}" == true ]]; then
         # Check if the logfile is already configured for logrotate
-        if ! grep -q "${HISTORY_FILE}" /etc/logrotate.conf "${LOGROTATE_DIR}"/* 2> /dev/null; then
-            warn "USE_LOGROTATE is true, but no logrotate config found for ${HISTORY_FILE}." >&2
+        if ! check_logrotate_config "${HISTORY_FILE}"; then
+            warn "USE_LOGROTATE is true, but no logrotate config found for ${HISTORY_FILE}."
             if [[ "${AUTO_SETUP_LOGROTATE}" == true ]]; then
                 auto_setup_logrotate "${HISTORY_FILE}"
             fi
@@ -246,36 +340,50 @@ EOF
     fi
 
     # =============================================================================
-    # Utility Functions
+    # File Management Functions
     # =============================================================================
 
-    # Ensure the log directory exists and the history file is writable
+    ###############################################################################
+    # ensure_history_file
+    #------------------------------------------------------------------------------
+    # Purpose  : Ensure the log directory exists and the history file is writable
+    # Arguments: None
+    # Outputs  : Error messages to stderr
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function ensure_history_file() {
         local history_dir
         history_dir=$(dirname "${HISTORY_FILE}")
 
         # Create log directory if it doesn't exist
         if ! mkdir -p "${history_dir}" 2> /dev/null; then
-            fail "Failed to create log directory: ${history_dir}" >&2
+            fail "Failed to create log directory: ${history_dir}"
             return 1
         fi
 
         # Create or touch the log file
         if ! touch "${HISTORY_FILE}" 2> /dev/null; then
-            fail "Failed to create or touch log file: ${HISTORY_FILE}" >&2
+            fail "Failed to create or touch log file: ${HISTORY_FILE}"
             return 1
         fi
 
         # Set restrictive permissions on the log file
         if ! chmod 600 "${HISTORY_FILE}" 2> /dev/null; then
-            fail "Failed to set permissions on log file: ${HISTORY_FILE}" >&2
+            fail "Failed to set permissions on log file: ${HISTORY_FILE}"
             return 1
         fi
 
         return 0
     }
 
-    # Acquire a basic lock if flock is unavailable
+    ###############################################################################
+    # basic_lock
+    #------------------------------------------------------------------------------
+    # Purpose  : Acquire a basic lock if flock is unavailable
+    # Arguments: None
+    # Outputs  : None
+    # Returns  : 0 if lock acquired, 1 otherwise
+    ###############################################################################
     function basic_lock() {
         if [[ -f "${LOCK_FILE}" ]]; then
             local pid
@@ -288,11 +396,18 @@ EOF
                 return 1
             fi
         fi
-        echo "$$" > "${LOCK_FILE}"
+        printf '%s\n' "$$" > "${LOCK_FILE}"
         return 0
     }
 
-    # Release basic lock
+    ###############################################################################
+    # basic_unlock
+    #------------------------------------------------------------------------------
+    # Purpose  : Release basic lock
+    # Arguments: None
+    # Outputs  : None
+    # Returns  : 0
+    ###############################################################################
     function basic_unlock() {
         rm -f "${LOCK_FILE}"
     }
@@ -301,7 +416,14 @@ EOF
     # Session Detection Functions
     # =============================================================================
 
-    # Determine the current session (screen, tmux, tty)
+    ###############################################################################
+    # get_session_info
+    #------------------------------------------------------------------------------
+    # Purpose  : Determine the current session (screen, tmux, tty)
+    # Arguments: None
+    # Outputs  : Session information string to stdout
+    # Returns  : 0
+    ###############################################################################
     function get_session_info() {
         local session_info
         if [[ -n "${STY:-}" ]]; then
@@ -309,71 +431,100 @@ EOF
             window_num="${WINDOW:-unknown}"
             session_info="screen:${STY:-}:(${window_num})"
         elif [[ -n "${TMUX:-}" ]]; then
-            local session_name window_name pane_name
-            session_name="unknown"
-            window_name="unknown"
-            pane_name="unknown"
+            local tmux_info
             if command -v tmux > /dev/null 2>&1; then
-                session_name=$(tmux display-message -p '#S' 2> /dev/null || echo "unknown")
-                window_name=$(tmux display-message -p '#I' 2> /dev/null || echo "-")
-                pane_name=$(tmux display-message -p '#P' 2> /dev/null || echo "-")
+                # Optimize: single tmux call instead of three separate calls
+                tmux_info=$(tmux display-message -p '#S:#I:#P' 2> /dev/null || echo "unknown:-:-")
+                session_info="tmux:${tmux_info%:*}(${tmux_info##*:})"
+            else
+                session_info="tmux:unknown(-:-)"
             fi
-            session_info="tmux:${session_name}(${window_name}:${pane_name})"
         else
             local tty pid
             tty=$(tty 2> /dev/null | sed 's|/dev/||' || echo "unknown")
             pid=$$
             session_info="tty(pid):${tty}(${pid})"
         fi
-        echo "${session_info}"
+        printf '%s' "${session_info}"
     }
 
-    # Determine current shell type
+    ###############################################################################
+    # get_shell
+    #------------------------------------------------------------------------------
+    # Purpose  : Determine current shell type
+    # Arguments: None
+    # Outputs  : Shell type (bash/zsh/unknown) to stdout
+    # Returns  : 0
+    ###############################################################################
     function get_shell() {
         if [[ -n "${BASH_VERSION:-}" ]]; then
-            echo "bash"
+            printf 'bash'
         elif [[ -n "${ZSH_VERSION:-}" ]]; then
-            echo "zsh"
+            printf 'zsh'
         else
-            echo "unknown"
+            printf 'unknown'
         fi
     }
 
-    # Retrieve the last executed command
+    ###############################################################################
+    # get_command
+    #------------------------------------------------------------------------------
+    # Purpose  : Retrieve the last executed command
+    # Arguments:
+    #   $1 : Shell type (bash/zsh)
+    # Outputs  : Last command to stdout
+    # Returns  : 0
+    ###############################################################################
     function get_command() {
         local shell_type="$1"
         local command=""
         case "${shell_type}" in
             bash)
-                command="$(history 1 | sed -E 's/^ *[0-9]+ *(\[[^]]*\] *)?//')"
+                # Use parameter expansion instead of sed for better performance
+                command="$(history 1)"
+                command="${command#"${command%%[![:space:]]*}"}"  # ltrim
+                command="${command#*[0-9] }"  # Remove leading number
+                command="${command#*] }"      # Remove timestamp if present
                 ;;
             zsh)
-                command="$(fc -ln -1 | sed 's/^[[:space:]]*//')"
+                command="$(fc -ln -1)"
+                command="${command#"${command%%[![:space:]]*}"}"  # ltrim
                 ;;
             *)
                 command=""
                 ;;
         esac
-        echo "${command}"
+        printf '%s' "${command}"
     }
 
     # =============================================================================
     # Logging Functions
     # =============================================================================
 
-    # Send log entry to syslog if enabled
+    ###############################################################################
+    # write_to_syslog
+    #------------------------------------------------------------------------------
+    # Purpose  : Send log entry to syslog if enabled
+    # Arguments:
+    #   $1 : Log line to send
+    # Outputs  : None (sends to syslog)
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function write_to_syslog() {
         local log_line="$1"
         if [[ "${SYSLOG_ENABLED}" == true ]]; then
             logger -p "${SYSLOG_FACILITY}.${SYSLOG_SEVERITY}" -- "${log_line}"
+            return $?
         fi
+        return 0
     }
 
     ###############################################################################
     # sanitize_log_string
     #------------------------------------------------------------------------------
     # Purpose  : Sanitize a string before writing to log files to prevent broken
-    #            log formats caused by quotes, control characters, etc.
+    #            log formats caused by quotes, control characters, command
+    #            substitution, etc.
     # Arguments:
     #   $1 : Raw input string
     # Outputs : Safe string for logging (stdout)
@@ -381,45 +532,83 @@ EOF
     ###############################################################################
     function sanitize_log_string() {
         local raw="${1:-}"
-        printf '%s' "${raw}" \
-            | sed -E '
-            s/\\/\\\\/g;      # escape backslashes
-            s/"/\\"/g;        # escape double quotes
-            s/\$/\\$/g;       # escape $ to prevent expansion
-            s/[\x00-\x1F\x7F]//g  # strip control chars
-        '
+        # Escape dangerous characters to prevent command injection
+        # Using tr to remove control chars, then parameter expansion for safety
+        local cleaned="${raw//\\/\\\\}"      # escape backslashes
+        cleaned="${cleaned//\"/\\\"}"        # escape double quotes
+        cleaned="${cleaned//\'/\\\'}"        # escape single quotes
+        cleaned="${cleaned//\`/\\\`}"        # escape backticks
+        cleaned="${cleaned//\$/\\\$}"        # escape $ to prevent expansion
+        cleaned="${cleaned//\(/\\\(}"        # escape opening parenthesis
+        cleaned="${cleaned//\)/\\\)}"        # escape closing parenthesis
+        # Strip control characters
+        cleaned="$(printf '%s' "${cleaned}" | tr -d '[:cntrl:]')"
+        printf '%s' "${cleaned}"
     }
 
-    # Write a log line to the main history file (and optional extra file)
+    ###############################################################################
+    # write_log_entry
+    #------------------------------------------------------------------------------
+    # Purpose  : Write a log line to the main history file (and optional extra file)
+    # Arguments:
+    #   $1 : Log line to write
+    #   $2 : Optional extra file path
+    # Outputs  : Error messages to stderr
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function write_log_entry() {
         local log_line="$1"
         local extra_file="${2:-}"
+        local rc=0
 
         log_line="$(sanitize_log_string "${log_line}")"
 
-        write_to_syslog "${log_line}"
+        write_to_syslog "${log_line}" || warn "Failed to write to syslog"
 
+        # Note: flock is not available on macOS by default (install via: brew install flock)
+        # Script falls back to basic_lock() if flock is not found
         if command -v "flock" > /dev/null 2>&1; then
-            flock -n "${LOCK_FILE}" -c "
-                echo \"${log_line}\" >> \"${HISTORY_FILE}\"
-                if [[ -n \"${extra_file}\" ]]; then
-                    echo \"${log_line}\" >> \"${extra_file}\"
-                fi
-            "
+            # Use printf instead of echo for safety
+            # Use file descriptors to avoid subshell issues
+            # FD 200 chosen to avoid conflicts with common descriptors (0-9)
+            exec 200> "${LOCK_FILE}"
+            if ! flock -n 200; then
+                warn "Could not acquire lock. Skipping log entry."
+                return 1
+            fi
+
+            printf '%s\n' "${log_line}" >> "${HISTORY_FILE}" || rc=1
+            if [[ -n "${extra_file}" ]]; then
+                printf '%s\n' "${log_line}" >> "${extra_file}" || rc=1
+            fi
+
+            # Release the lock
+            exec 200>&-
+
+            return "${rc}"
         else
             if basic_lock; then
-                echo "${log_line}" >> "${HISTORY_FILE}"
+                printf '%s\n' "${log_line}" >> "${HISTORY_FILE}" || rc=1
                 if [[ -n "${extra_file:-}" ]]; then
-                    echo "${log_line}" >> "${extra_file}"
+                    printf '%s\n' "${log_line}" >> "${extra_file}" || rc=1
                 fi
                 basic_unlock
+                return "${rc}"
             else
-                fail "Could not acquire lock. Skipping log entry." >&2
+                warn "Could not acquire lock. Skipping log entry."
+                return 1
             fi
         fi
     }
 
-    # Log the most recent interactive command
+    ###############################################################################
+    # log_command_unified
+    #------------------------------------------------------------------------------
+    # Purpose  : Log the most recent interactive command
+    # Arguments: None
+    # Outputs  : None (writes to log file)
+    # Returns  : 0
+    ###############################################################################
     function log_command_unified() {
         local date_time session_info command shell_type log_line
 
@@ -457,10 +646,11 @@ EOF
     # =============================================================================
     function trace_run() {
         local target_script shell_type timestamp per_run_log session_info rc
-        local interpreter first_line trace_cmd
+        local interpreter first_line
+        local temp_trace_file
 
         if [[ $# -lt 1 ]]; then
-            echo "Usage: trace_run <script> [args...]" >&2
+            error "Usage: trace_run <script> [args...]"
             return 1
         fi
 
@@ -468,7 +658,7 @@ EOF
         shift
 
         if [[ ! -f "${target_script}" ]] || [[ ! -r "${target_script}" ]]; then
-            fail "Script not found or not readable: ${target_script}" >&2
+            fail "Script not found or not readable: ${target_script}"
             return 2
         fi
 
@@ -476,9 +666,17 @@ EOF
         shell_type=$(get_shell)
 
         timestamp=$(date "+%Y%m%d_%H%M%S")
-        per_run_log="${HISTORY_FILE}.${timestamp}.${target_script##*/}.trace"
 
-        echo "Tracing ${target_script} → ${per_run_log}"
+        # Use mktemp for secure temp file creation to avoid race conditions
+        # Use -t for macOS compatibility
+        temp_trace_file=$(mktemp -t "history_trace.XXXXXX") || {
+            fail "Failed to create temporary trace file"
+            return 3
+        }
+
+        per_run_log="${HISTORY_FILE}.${timestamp}.${target_script##*/}.$$.${RANDOM}.trace"
+
+        info "Tracing ${target_script} → ${per_run_log}"
 
         # Default interpreter to current shell binary
         if [[ "${shell_type}" == "bash" ]]; then
@@ -500,43 +698,62 @@ EOF
             fi
         fi
 
-        # Construct trace command
-        trace_cmd=("${interpreter}" -x "${target_script}" "$@")
+        # Pre-declare variables to avoid subshell scope issues
+        local trace_line trace_command trace_datetime trace_log_entry
 
+        # Run the script with tracing enabled
+        # Use temp file to avoid process substitution subshell issues
         {
-            export PS4='+TRACE+ '
-            "${trace_cmd[@]}"
-        } 2> >(
-            while IFS= read -r line; do
-                if [[ "${line}" == +TRACE+* ]]; then
-                    local command date_time log_entry
-                    command="${line#'+TRACE+ '}"
-                    date_time=$(date +"%Y-%m-%d %H:%M:%S")
-                    log_entry="[${date_time}] (${interpreter}) ${session_info} # ${command}"
-                    write_log_entry "${log_entry}" "${per_run_log}"
+            PS4="${TRACE_PREFIX}" "${interpreter}" -x "${target_script}" "$@" 2>&1 | while IFS= read -r trace_line; do
+                if [[ "${trace_line}" == "${TRACE_PREFIX}"* ]]; then
+                    trace_command="${trace_line#"${TRACE_PREFIX}"}"
+                    trace_datetime=$(date +"%Y-%m-%d %H:%M:%S")
+                    trace_log_entry="[${trace_datetime}] (${interpreter}) ${session_info} # ${trace_command}"
+                    printf '%s\n' "${trace_log_entry}" >> "${temp_trace_file}"
+                    write_log_entry "${trace_log_entry}"
                 else
-                    echo "${line}" >> "${per_run_log}"
+                    printf '%s\n' "${trace_line}" >> "${temp_trace_file}"
                 fi
             done
-        ) > >(
-            tee -a "${per_run_log}"
-        )
 
-        rc=$?
+            # Capture the exit code from the pipeline
+            # Bash uses PIPESTATUS, Zsh uses pipestatus (and indexes from 1)
+            if [[ -n "${BASH_VERSION:-}" ]]; then
+                printf '%s' "${PIPESTATUS[0]}"
+            elif [[ -n "${ZSH_VERSION:-}" ]]; then
+                printf '%s' "${pipestatus[1]}"
+            else
+                printf '0'
+            fi
+        } > "${temp_trace_file}.rc"
 
-        # log final outcome
-        local date_time log_entry
-        date_time=$(date +"%Y-%m-%d %H:%M:%S")
-        log_entry="[${date_time}] (${interpreter}) ${session_info} # trace_run exit code: ${rc}"
-        write_log_entry "${log_entry}" "${per_run_log}"
+        # Read the actual return code
+        rc=$(cat "${temp_trace_file}.rc")
+        rm -f "${temp_trace_file}.rc"
 
+        # Log final outcome
+        local final_datetime final_log_entry
+        final_datetime=$(date +"%Y-%m-%d %H:%M:%S")
+        final_log_entry="[${final_datetime}] (${interpreter}) ${session_info} # trace_run exit code: ${rc}"
+        printf '%s\n' "${final_log_entry}" >> "${temp_trace_file}"
+        write_log_entry "${final_log_entry}"
+
+        # Move temp file to final location
+        mv "${temp_trace_file}" "${per_run_log}" || {
+            fail "Failed to move trace file to ${per_run_log}"
+            rm -f "${temp_trace_file}"
+            return 3
+        }
+
+        # Set restrictive permissions
         chmod 600 "${per_run_log}" || {
-            fail "Failed to set permissions on ${per_run_log}" >&2
+            fail "Failed to set permissions on ${per_run_log}"
             return 3
         }
 
         return "${rc}"
     }
+
     # =============================================================================
     # test_logging_setup
     # ------------------
@@ -548,18 +765,18 @@ EOF
     # - log entries can be written
     # =============================================================================
     function test_logging_setup() {
-        local test_message logrotate_file test_line
+        local test_message logrotate_file test_line test_random
 
-        echo "========== Testing Logging Setup =========="
+        info "========== Testing Logging Setup =========="
 
         # Check log file exists and writable
         if [[ ! -f "${HISTORY_FILE}" ]]; then
-            fail "Log file does not exist: ${HISTORY_FILE}" >&2
+            fail "Log file does not exist: ${HISTORY_FILE}"
             return 1
         fi
 
         if [[ ! -w "${HISTORY_FILE}" ]]; then
-            fail "Log file is not writable: ${HISTORY_FILE}" >&2
+            fail "Log file is not writable: ${HISTORY_FILE}"
             return 1
         fi
         pass "Log file exists and is writable: ${HISTORY_FILE}"
@@ -573,11 +790,11 @@ EOF
 
         # Check syslog capability if enabled
         if [[ "${SYSLOG_ENABLED}" == true ]]; then
-            test_message="Test message from bash.history.sh at $(date)"
-            if logger -p "${SYSLOG_FACILITY}.${SYSLOG_SEVERITY}" -- "${test_message}"; then
+            test_message="Test message from ${SCRIPT_NAME} v${SCRIPT_VERSION} at $(date)"
+            if write_to_syslog "${test_message}"; then
                 pass "Successfully sent test message to syslog: ${test_message}"
             else
-                fail "Failed to send test message to syslog." >&2
+                fail "Failed to send test message to syslog."
                 return 1
             fi
         else
@@ -586,34 +803,28 @@ EOF
 
         # Check logrotate config if enabled
         if [[ "${USE_LOGROTATE}" == true ]]; then
-            logrotate_file="${LOGROTATE_DIR}/$(basename "${HISTORY_FILE}").logrotate"
-
-            if grep -q "${HISTORY_FILE}" /etc/logrotate.conf "${LOGROTATE_DIR}"/* 2> /dev/null; then
+            if check_logrotate_config "${HISTORY_FILE}"; then
                 pass "Logrotate config found for ${HISTORY_FILE}."
-            elif [[ -f "${logrotate_file}" ]]; then
-                pass "Auto-created logrotate config exists: ${logrotate_file}"
             else
-                fail "Logrotate config missing and auto-setup not run." >&2
+                fail "Logrotate config missing and auto-setup not run."
                 return 1
             fi
         else
             info "Logrotate integration is disabled."
         fi
 
-        # Test writing a sample log line
-        if [[ -z "${RANDOM:-}" ]]; then
-            RANDOM_SEED="${RANDOM_SEED:-12345}"
-            RANDOM=$(((RANDOM_SEED + $$ + SECONDS) % 32768))
+        # Test writing a sample log line with better random generation
+        test_random="${RANDOM:-$$}"
+        test_line="[TEST] (${test_random}) test_logging_setup # This is a test log entry."
+
+        if write_log_entry "${test_line}"; then
+            pass "Successfully wrote test log entry to ${HISTORY_FILE}"
+        else
+            fail "Failed to write test log entry to ${HISTORY_FILE}"
+            return 1
         fi
 
-        test_line="[TEST] (${RANDOM}) test_logging_setup # This is a test log entry."
-        write_log_entry "${test_line}" || {
-            fail "Failed to write test log entry to ${HISTORY_FILE}" >&2
-            return 1
-        }
-
-        pass "Successfully wrote test log entry to ${HISTORY_FILE}"
-        echo "========== Logging Setup Test Completed =========="
+        info "========== Logging Setup Test Completed =========="
 
         return 0
     }
@@ -630,7 +841,7 @@ EOF
         # Ensure precmd_functions is declared
         if typeset -p precmd_functions > /dev/null 2>&1; then
             # Only add if not already present
-            found=false
+            typeset found=false
             for func in "${precmd_functions[@]}"; do
                 if [[ "${func}" == "log_command_unified" ]]; then
                     found=true
@@ -648,12 +859,12 @@ EOF
     fi
 
     ensure_history_file || {
-        fail "Logging could not be initialized. Commands will not be logged." >&2
+        fail "Logging could not be initialized. Commands will not be logged."
     }
 
     if [[ "${RUN_LOGGING_SELFTEST}" == true ]]; then
         test_logging_setup
     fi
 
-    echo "Command logging initialized for Bash/Zsh. Log file: ${HISTORY_FILE}"
+    info "Command logging initialized for Bash/Zsh (v${SCRIPT_VERSION}). Log file: ${HISTORY_FILE}"
 fi
