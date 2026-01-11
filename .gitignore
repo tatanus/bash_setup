@@ -64,6 +64,7 @@ venv/
 
 # AI directories (internal pipeline state)
 .claude/
+CLAUDE.md
 
 # Generated files
 dist/
