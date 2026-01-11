@@ -70,8 +70,12 @@ if [[ -z "${BASH_ALIAS_SH_LOADED:-}" ]]; then
     if check_command "eza"; then
         # (interactive only)
         if [[ $- == *i* ]]; then
-            alias ls='convert_ls_to_eza'
-            debug "Alias set: ls -> convert_ls_to_eza"
+            # FIX SC2262: Use a function wrapper instead of an alias
+            # This prevents "alias defined and used in same parsing unit" errors
+            ls() {
+                convert_ls_to_eza "$@"
+            }
+            debug "Function set: ls -> convert_ls_to_eza"
         fi
     else
         # Enable color support of ls

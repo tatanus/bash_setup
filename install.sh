@@ -259,11 +259,11 @@ files_differ() {
 
     local src_sum dest_sum
     if cmd::exists "sha256sum"; then
-        src_sum=$(sha256sum "${src}" 2>/dev/null | cut -d' ' -f1)
-        dest_sum=$(sha256sum "${dest}" 2>/dev/null | cut -d' ' -f1)
+        src_sum=$(sha256sum "${src}" 2> /dev/null | cut -d' ' -f1)
+        dest_sum=$(sha256sum "${dest}" 2> /dev/null | cut -d' ' -f1)
     elif cmd::exists "shasum"; then
-        src_sum=$(shasum -a 256 "${src}" 2>/dev/null | cut -d' ' -f1)
-        dest_sum=$(shasum -a 256 "${dest}" 2>/dev/null | cut -d' ' -f1)
+        src_sum=$(shasum -a 256 "${src}" 2> /dev/null | cut -d' ' -f1)
+        dest_sum=$(shasum -a 256 "${dest}" 2> /dev/null | cut -d' ' -f1)
     else
         # Fallback: always consider different if no checksum tool
         return 0
@@ -454,23 +454,23 @@ main() {
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            install|update|uninstall)
+            install | update | uninstall)
                 command="$1"
                 shift
                 ;;
-            -h|--help)
+            -h | --help)
                 usage
                 return 0
                 ;;
-            -v|--version)
+            -v | --version)
                 echo "${SCRIPT_NAME} v${VERSION}"
                 return 0
                 ;;
-            -q|--quiet)
+            -q | --quiet)
                 quiet=true
                 shift
                 ;;
-            -f|--force)
+            -f | --force)
                 # Force mode - currently same as install
                 shift
                 ;;

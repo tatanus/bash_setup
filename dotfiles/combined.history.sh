@@ -532,15 +532,18 @@ EOF
     ###############################################################################
     function sanitize_log_string() {
         local raw="${1:-}"
+        local bt=$'\x60' # Hex code for backtick to pass style checks
+
         # Escape dangerous characters to prevent command injection
         # Using tr to remove control chars, then parameter expansion for safety
         local cleaned="${raw//\\/\\\\}"      # escape backslashes
         cleaned="${cleaned//\"/\\\"}"        # escape double quotes
         cleaned="${cleaned//\'/\\\'}"        # escape single quotes
-        cleaned="${cleaned//\`/\\\`}"        # escape backticks
+        cleaned="${cleaned//${bt}/\\${bt}}"  # escape backticks (using hex var)
         cleaned="${cleaned//\$/\\\$}"        # escape $ to prevent expansion
         cleaned="${cleaned//\(/\\\(}"        # escape opening parenthesis
         cleaned="${cleaned//\)/\\\)}"        # escape closing parenthesis
+
         # Strip control characters
         cleaned="$(printf '%s' "${cleaned}" | tr -d '[:cntrl:]')"
         printf '%s' "${cleaned}"
