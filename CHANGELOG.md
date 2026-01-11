@@ -5,6 +5,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed incorrect path in `.github/workflows/main.yml` for style check script (was `./check_bash_style.sh`, now `./tools/check_bash_style.sh`)
+
+### Changed
+- Moved `dotfiles/COMBINED_HISTORY.md` to `docs/COMBINED_HISTORY.md`
+- Removed `spec/` directory files (moved to `.claude/spec/` as internal pipeline infrastructure)
+
 ## [1.0.0] - 2025-01-11
 ### Added
 - New unified `install.sh` script with install/update/uninstall commands

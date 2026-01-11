@@ -29,8 +29,8 @@ jobs:
 
       - name: Run Style Guide Checks
         run: |
-          chmod +x ./check_bash_style.sh
-          ./check_bash_style.sh
+          chmod +x ./tools/check_bash_style.sh
+          ./tools/check_bash_style.sh
  
   validate_permissions:
     name: Validate File Permissions and Shebangs
