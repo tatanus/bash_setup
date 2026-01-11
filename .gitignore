@@ -62,9 +62,8 @@ venv/
 *.env
 *.config
 
-# AI directories
+# AI directories (internal pipeline state)
 .claude/
-spec/
 
 # Generated files
 dist/
