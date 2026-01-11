@@ -3,15 +3,12 @@
 # NAME         : compile.sh
 # DESCRIPTION  : Safe wrapper for CI/test/commit/release workflow.
 #                Subcommands:
-#                  - test     : update submodules, run CI, run tests
-#                  - commit   : update submodules, run CI, run tests,
-#                               refresh README submodules section,
-#                               auto-increment VERSION (patch), commit & push
-#                  - release  : update submodules, run CI, run tests,
-#                               refresh README submodules section,
-#                               set VERSION to X.Y.Z (or auto-bump patch),
-#                               update CITATION.cff + docs/CHANGELOG.md
-#                               (via git-cliff if available),
+#                  - test     : run CI and tests
+#                  - commit   : run CI, run tests, auto-increment VERSION
+#                               (patch), commit & push
+#                  - release  : run CI, run tests, set VERSION to X.Y.Z
+#                               (or auto-bump patch), update CITATION.cff +
+#                               CHANGELOG.md (via git-cliff if available),
 #                               commit, tag vX.Y.Z, and push (with tags)
 ###############################################################################
 set -uo pipefail
@@ -46,102 +43,7 @@ ensure_git_repo() {
     fi
 }
 
-#========================== README submodules block ===========================#
-update_readme_submodules() {
-    local -r readme='README.md'
-    local -r mark_start='<!-- SUBMODULES-LIST:START -->'
-    local -r mark_end='<!-- SUBMODULES-LIST:END -->'
-
-    _normalize_url() {
-        local url
-        url=${1:-}
-        if [[ ${url} =~ ^git@([^:]+):(.+)$ ]]; then
-            printf 'https://%s/%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
-            return 0
-        fi
-        if [[ ${url} =~ ^ssh://git@([^/]+)/(.+)$ ]]; then
-            printf 'https://%s/%s' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
-            return 0
-        fi
-        printf '%s' "${url}"
-    }
-
-    if [[ ! -f .gitmodules ]]; then
-        log_info 'No .gitmodules found; skipping README submodules section.'
-        return 0
-    fi
-
-    local -a paths=()
-    # shellcheck disable=SC2016
-    while IFS= read -r line; do
-        paths+=("${line}")
-    done < <(git config --file .gitmodules --get-regexp 'submodule\..*\.path' | awk '{print $2}' | sort -u)
-
-    local list_content=''
-    if ((${#paths[@]} == 0)); then
-        list_content='* _No submodules configured_\n'
-    else
-        local path url norm
-        for path in "${paths[@]}"; do
-            url=$(git config --file .gitmodules --get "submodule.${path}.url" || true)
-            norm=$(_normalize_url "${url}")
-            list_content+="* [${path}](${norm})\n"
-        done
-    fi
-
-    if [[ ! -f ${readme} ]]; then
-        log_warn 'README.md not found; creating one.'
-        printf '# Project\n\n' > "${readme}"
-    fi
-
-    # Only include the "## Submodules" header if README does not already have it.
-    local header_prefix=''
-    if ! grep -qE '^##[[:space:]]+Submodules[[:space:]]*$' "${readme}"; then
-        header_prefix='## Submodules\n'
-    fi
-
-    local block tmpblock
-    # Build the replacement block: [optional header] + markers + list
-    printf -v block '%s%s\n\n%b\n%s\n' "${header_prefix}" "${mark_start}" "${list_content}" "${mark_end}"
-    tmpblock=$(mktemp)
-    printf '%s\n' "${block}" > "${tmpblock}"
-
-    if grep -qF "${mark_start}" "${readme}"; then
-        awk -v start="${mark_start}" -v end="${mark_end}" -v newfile="${tmpblock}" '
-            BEGIN { in_block=0 }
-            {
-                if ($0 ~ start) {
-                    while ((getline line < newfile) > 0) print line
-                    close(newfile)
-                    in_block=1
-                    next
-                }
-                if ($0 ~ end) { in_block=0; next }
-                if (in_block==0) print $0
-            }
-        ' "${readme}" > "${readme}.tmp"
-        mv "${readme}.tmp" "${readme}"
-        log_info 'Updated README submodules section.'
-    else
-        {
-            printf '\n'
-            cat "${tmpblock}"
-        } >> "${readme}"
-        log_info 'Appended README submodules section.'
-    fi
-
-    rm -f "${tmpblock}"
-    log_pass 'README submodules refreshed.'
-}
-
 #=============================== CI/Test steps ================================#
-update_submodules() {
-    log_info 'Updating submodules (init + sync + recursive update)...'
-    make submodules-init
-    make submodules-update
-    log_pass 'Submodules updated.'
-}
-
 run_ci() {
     log_info 'Running CI (format + lint + tests)...'
     make ci
@@ -227,11 +129,10 @@ update_citation_for_release() {
 update_changelog_for_release() {
     local ver="${1:?missing version}" d chlog tmp
     d="$(date +%F)"
-    chlog="docs/CHANGELOG.md"
+    chlog="CHANGELOG.md"
 
     if [[ ! -f "${chlog}" ]]; then
         log_warn "Missing ${chlog}; creating a fresh changelog."
-        mkdir -p docs
         cat > "${chlog}" << EOF
 # Changelog
 All notable changes to this project will be documented in this file.
@@ -283,8 +184,6 @@ EOF
 }
 
 #======================== Release notes / changelog ===========================#
-# Generates RELEASE_NOTES.md and updates docs/CHANGELOG.md using git-cliff.
-# Returns 0 on success, non-zero if git-cliff unavailable and could not be installed.
 generate_release_notes() {
     local ver="${1:?missing version}"
     require_bin git
@@ -292,12 +191,10 @@ generate_release_notes() {
     if ! command -v git-cliff > /dev/null 2>&1; then
         log_info "git-cliff not found; attempting quick install..."
         if command -v apt-get > /dev/null 2>&1; then
-            # Avoid SC2015: group commands and handle failure explicitly
             if ! (sudo apt-get update -y && sudo apt-get install -y git-cliff); then
                 log_warn "Could not install git-cliff via apt-get; continuing without it."
             fi
         elif command -v brew > /dev/null 2>&1; then
-            # Avoid SC2015: treat brew failure explicitly
             if ! brew install git-cliff; then
                 log_warn "Could not install git-cliff via Homebrew; continuing without it."
             fi
@@ -309,18 +206,15 @@ generate_release_notes() {
         return 1
     fi
 
-    mkdir -p docs
-
     if [[ -f .git-cliff.toml ]]; then
-        git-cliff -c .git-cliff.toml --tag "v${ver}" --prepend docs/CHANGELOG.md
+        git-cliff -c .git-cliff.toml --tag "v${ver}" --prepend CHANGELOG.md
         git-cliff -c .git-cliff.toml --tag "v${ver}" --output RELEASE_NOTES.md
     else
-        # Use git-cliff defaults (Conventional Commits)
-        git-cliff --tag "v${ver}" --prepend docs/CHANGELOG.md
+        git-cliff --tag "v${ver}" --prepend CHANGELOG.md
         git-cliff --tag "v${ver}" --output RELEASE_NOTES.md
     fi
 
-    git add docs/CHANGELOG.md RELEASE_NOTES.md || true
+    git add CHANGELOG.md RELEASE_NOTES.md || true
     log_info "Generated changelog and release notes for v${ver}."
     return 0
 }
@@ -339,7 +233,6 @@ prompt_commit_msg() {
 
 do_commit_and_push() {
     ensure_git_repo
-    update_readme_submodules
 
     log_info 'Staging changes...'
     git add -A
@@ -364,20 +257,17 @@ do_commit_and_push() {
 }
 
 #================================= Release ===================================#
-# Usage:
-#   ./compile.sh release          # auto-bump patch
-#   ./compile.sh release 1.2.3    # set exact version
 do_release() {
     ensure_git_repo
 
-    update_readme_submodules
     git add -A
 
     local new_ver
     if [[ $# -ge 1 ]]; then
         local req_ver="$1"
-        validate_semver "${req_ver}"
-        if [[ $? -ne 0 ]]; then
+        local semver_valid=0
+        validate_semver "${req_ver}" || semver_valid=$?
+        if [[ ${semver_valid} -ne 0 ]]; then
             log_fail "Invalid SemVer: ${req_ver} (expected X.Y.Z)"
             exit 2
         fi
@@ -391,16 +281,11 @@ do_release() {
 
     update_citation_for_release "${new_ver}"
 
-    # Prefer git-cliff for notes/changelog; fall back to stub updater if unavailable
-    # Avoid SC2310: don't invoke the function in a conditional (||/!/&&).
-    gen_rc=0
-    set +e
-    generate_release_notes "${new_ver}"
-    gen_rc=$?
-    if [[ "${gen_rc}" -ne 0 ]]; then
-        update_changelog_for_release "${new_ver}"
-    else
+    # generate_release_notes may fail if git-cliff unavailable; if so fallback
+    if generate_release_notes "${new_ver}"; then
         log_info "Release notes/changelog generated via git-cliff."
+    else
+        update_changelog_for_release "${new_ver}"
     fi
 
     git add -A
@@ -439,20 +324,17 @@ main() {
 
     case "${cmd}" in
         test)
-            update_submodules
             run_ci
             run_tests
             log_pass "Workflow 'test' completed successfully."
             ;;
         commit)
-            update_submodules
             run_ci
             run_tests
             do_commit_and_push
             log_pass "Workflow 'commit' completed successfully."
             ;;
         release)
-            update_submodules
             run_ci
             run_tests
             shift || true
@@ -468,28 +350,23 @@ main() {
             cat << 'USAGE'
 Usage:
   ./compile.sh test
-      - Update submodules
       - Run CI (format + lint + tests)
       - Run tests (explicit)
 
   ./compile.sh commit
-      - Update submodules
       - Run CI (format + lint + tests)
       - Run tests (explicit)
-      - Refresh README Submodules block (idempotent)
       - Prompt for commit message
       - Auto-increment VERSION (patch)
       - Git commit & push
 
   ./compile.sh release [X.Y.Z]
-      - Update submodules
       - Run CI (format + lint + tests)
       - Run tests (explicit)
-      - Refresh README Submodules block (idempotent)
       - Set VERSION to X.Y.Z (or auto-bump patch if omitted)
       - Update CITATION.cff (version/date-released)
-      - Generate RELEASE_NOTES.md and update docs/CHANGELOG.md via git-cliff (if available)
-      - Fallback: update docs/CHANGELOG.md with a stub section
+      - Generate RELEASE_NOTES.md and update CHANGELOG.md via git-cliff (if available)
+      - Fallback: update CHANGELOG.md with a stub section
       - Git commit "chore(release): vX.Y.Z"
       - Create annotated tag vX.Y.Z
       - Push branch and tags

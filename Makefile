@@ -2,11 +2,10 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 SHS          := $(shell git ls-files '*.sh' 2>/dev/null)
-BINS         := $(shell find menu -type f -perm -111 2>/dev/null)
 BATS         := $(shell command -v bats 2>/dev/null)
 SHFMT_OPTS   := -i 4 -ci -sr
 
-# Versioning (optional)
+# Versioning
 VERSION_FILE ?= VERSION
 SEMVER_RE    := ^[0-9]+\.[0-9]+\.[0-9]+$
 
@@ -18,28 +17,9 @@ help: ## Show help
 	@awk 'BEGIN{FS=":.*##"; print "Targets:"} /^[a-zA-Z0-9_.-]+:.*##/{printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # --------------------------------------------------------------------
-# Submodules
-# --------------------------------------------------------------------
-.PHONY: submodules-init submodules-update submodules-lock init update
-submodules-init: ## git submodule init + sync + recursive update
-	git submodule sync --recursive
-	git submodule update --init --recursive
-
-submodules-update: ## update submodules to latest tracked branches
-	git submodule foreach 'git fetch --tags --all || true'
-	git submodule update --remote --merge --recursive
-
-submodules-lock: ## record current submodule commits (no fetch)
-	git add .gitmodules
-	git submodule status
-
-init: submodules-init     ## alias
-update: submodules-update ## alias
-
-# --------------------------------------------------------------------
 # Code quality
 # --------------------------------------------------------------------
-.PHONY: fmt lint test ci
+.PHONY: fmt lint test ci style
 fmt: ## Format with shfmt
 	@if [ -n "$(SHS)" ]; then shfmt -w $(SHFMT_OPTS) $(SHS); else echo "No *.sh files to format."; fi
 
@@ -50,10 +30,13 @@ test: ## Run bats tests
 	@if [ -z "$(BATS)" ]; then echo "bats not installed"; exit 1; fi
 	@if ls tests/*.bats >/dev/null 2>&1; then bats -r tests; else echo "No tests/ found; ok."; fi
 
-ci: submodules-init fmt lint test ## Format + lint + test
+style: ## Run comprehensive style checks
+	@bash tools/check_bash_style.sh
+
+ci: fmt lint test ## Format + lint + test
 
 # --------------------------------------------------------------------
-# Versioning (optional)
+# Versioning
 # --------------------------------------------------------------------
 .PHONY: version show-version set-version tag release check-version
 version show-version: ## Print current version
@@ -88,15 +71,15 @@ check-version: ## Validate VERSION file format
 # --------------------------------------------------------------------
 # Install / Run
 # --------------------------------------------------------------------
-.PHONY: install run
-install: ## Install menu scripts into /usr/local/bin
-	install -d /usr/local/bin
-	@if [ -n "$(BINS)" ]; then \
-	  for f in $(BINS); do install -m 0755 $$f /usr/local/bin/$$(basename $$f); done; \
-	else echo "No executable files in menu/"; fi
+.PHONY: install update uninstall
+install: ## Install dotfiles
+	@bash install.sh install
 
-run: ## Run the setup menu
-	bash menu/setup-menu.sh
+update: ## Update changed dotfiles only
+	@bash install.sh update
+
+uninstall: ## Restore original dotfiles
+	@bash install.sh uninstall
 
 # --------------------------------------------------------------------
 # Cleanup
@@ -104,3 +87,4 @@ run: ## Run the setup menu
 .PHONY: clean
 clean: ## Clean temp files
 	find . -type f -name '*.tmp' -delete 2>/dev/null || true
+	find . -type f -name '.DS_Store' -delete 2>/dev/null || true

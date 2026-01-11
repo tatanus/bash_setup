@@ -10,7 +10,15 @@ load './load.bash'
   [ -n "$(ls -A "${REPO_ROOT}/dotfiles")" ]
 }
 
-@test "config files exist" {
-  [ -f "${REPO_ROOT}/config/config.sh" ]
-  [ -f "${REPO_ROOT}/config/lists.sh" ]
+@test "install.sh exists and is executable" {
+  [ -f "${REPO_ROOT}/install.sh" ]
+  [ -x "${REPO_ROOT}/install.sh" ]
+}
+
+@test "VERSION file exists" {
+  [ -f "${REPO_ROOT}/VERSION" ]
+}
+
+@test "tools directory exists" {
+  [ -d "${REPO_ROOT}/tools" ]
 }

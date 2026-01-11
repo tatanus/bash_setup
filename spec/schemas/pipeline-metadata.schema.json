@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pipeline Metadata Schema",
+  "description": "Schema for validating pipeline-metadata.json",
+  "type": "object",
+  "required": ["mode", "change_scope", "migration", "release", "required_gates", "release_triggered", "spec_ratification", "context_compression"],
+  "additionalProperties": false,
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["migrate", "greenfield", "maintenance"],
+      "description": "Pipeline execution mode"
+    },
+    "change_scope": {
+      "type": "string",
+      "enum": ["full", "partial", "minimal"],
+      "description": "Scope of changes being made"
+    },
+    "migration": {
+      "type": "object",
+      "required": ["enabled", "pass"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "pass": { "type": "integer", "minimum": 1 },
+        "warnings_only_on_pass1": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "required": ["triggered", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "triggered": { "type": "boolean" },
+        "type": {
+          "type": "string",
+          "enum": ["none", "patch", "minor", "major"]
+        }
+      }
+    },
+    "required_gates": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "release_triggered": {
+      "type": "boolean"
+    },
+    "spec_ratification": {
+      "type": "object",
+      "required": ["required", "mode", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "boolean" },
+        "mode": {
+          "type": "string",
+          "enum": ["human", "auto"]
+        },
+        "path": { "type": "string" }
+      }
+    },
+    "context_compression": {
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "max_feedback_entries": { "type": "integer" },
+        "max_audit_runs": { "type": "integer" },
+        "summary_dir": { "type": "string" }
+      }
+    }
+  }
+}

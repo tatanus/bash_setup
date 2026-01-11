@@ -62,6 +62,9 @@ venv/
 *.env
 *.config
 
+# AI directories
+.claude/
+
 # Generated files
 dist/
 build/

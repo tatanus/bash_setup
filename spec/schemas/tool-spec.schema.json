@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ToolSpec Schema",
+  "description": "Authoritative JSON Schema for tool-spec.json validation",
+  "type": "object",
+  "required": ["blocked", "name", "summary", "language_mode", "languages", "entrypoints", "io", "constraints", "security", "logging", "exit_codes", "tests", "docs"],
+  "additionalProperties": false,
+  "properties": {
+    "blocked": {
+      "type": "boolean",
+      "description": "Whether the specification is blocked from proceeding"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Tool name identifier"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Brief description of the tool's purpose"
+    },
+    "language_mode": {
+      "type": "string",
+      "enum": ["bash", "python", "hybrid"],
+      "description": "Primary language mode for the tool"
+    },
+    "languages": {
+      "type": "object",
+      "required": ["bash", "python"],
+      "additionalProperties": false,
+      "properties": {
+        "bash": {
+          "type": "object",
+          "required": ["version", "strict_mode", "enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "version": { "type": "string" },
+            "strict_mode": { "type": "boolean" },
+            "enabled": { "type": "boolean" }
+          }
+        },
+        "python": {
+          "type": "object",
+          "required": ["version", "typing", "venv_required", "enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "version": { "type": "string" },
+            "typing": { "type": "string", "enum": ["required", "recommended", "optional"] },
+            "venv_required": { "type": "boolean" },
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "entrypoints": {
+      "type": "object",
+      "required": ["bash", "python"],
+      "additionalProperties": false,
+      "properties": {
+        "bash": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "python": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "interfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bash_to_python": {
+          "type": "object",
+          "required": ["mode", "enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "type": "string", "enum": ["json_files", "cli_args", "none"] },
+            "ipc_request_schema_path": { "type": "string" },
+            "ipc_response_schema_path": { "type": "string" },
+            "python_invocation_contract": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "requires_request_json": { "type": "boolean" },
+                "supports_cli_args": { "type": "boolean" }
+              }
+            },
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "io": {
+      "type": "object",
+      "required": ["inputs", "outputs"],
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["platforms", "dependencies", "tools"],
+      "additionalProperties": false,
+      "properties": {
+        "platforms": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["darwin", "linux", "windows"] }
+        },
+        "dependencies": {
+          "type": "object",
+          "required": ["bash", "python"],
+          "additionalProperties": false,
+          "properties": {
+            "bash": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "python": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "version"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": ["threat_model", "unsafe_operations", "validation_rules"],
+      "additionalProperties": false,
+      "properties": {
+        "threat_model": { "type": "string" },
+        "unsafe_operations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "validation_rules": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "required": ["format", "levels"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "type": "string", "enum": ["structured", "plain", "json"] },
+        "levels": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "exit_codes": {
+      "type": "object",
+      "required": ["success", "validation_error", "runtime_error"],
+      "additionalProperties": false,
+      "properties": {
+        "success": { "type": "integer" },
+        "validation_error": { "type": "integer" },
+        "runtime_error": { "type": "integer" }
+      }
+    },
+    "tests": {
+      "type": "object",
+      "required": ["frameworks", "cases"],
+      "additionalProperties": false,
+      "properties": {
+        "frameworks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "bash": { "type": "string" },
+            "python": { "type": "string" }
+          }
+        },
+        "cases": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "docs": {
+      "type": "object",
+      "required": ["readme_sections"],
+      "additionalProperties": false,
+      "properties": {
+        "readme_sections": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
