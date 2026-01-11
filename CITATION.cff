@@ -1,13 +1,18 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "bash_setup"
-abstract: "Opinionated Bash-based setup tooling with tests, linting, and CI for consistent developer environments."
-version: "0.9.0"
-date-released: "2025-09-11"
+abstract: "Bash dotfiles installer and manager with install/update/uninstall commands, checksum-based change detection, and comprehensive test coverage."
+version: "1.0.0"
+date-released: "2025-01-11"
 authors:
   - given-names: "Adam"
-      family-names: "Compton"
-      repository-code: "https://github.com/tatanus/bash_setup"
-      license: "MIT"
-      keywords: ["bash", "automation", "setup", "dotfiles", "dev-environment"]
-
+    family-names: "Compton"
+repository-code: "https://github.com/tatanus/bash_setup"
+license: "MIT"
+keywords:
+  - bash
+  - dotfiles
+  - automation
+  - setup
+  - shell-configuration
+  - dev-environment

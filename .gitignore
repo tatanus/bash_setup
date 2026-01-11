@@ -64,6 +64,7 @@ venv/
 
 # AI directories
 .claude/
+spec/
 
 # Generated files
 dist/
