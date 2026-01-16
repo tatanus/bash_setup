@@ -449,6 +449,7 @@ cmd_uninstall() {
 main() {
     local command="install"
     local skip_tools=false
+    # shellcheck disable=SC2034 # TODO: quiet mode not yet implemented
     local quiet=false
 
     # Parse arguments
@@ -467,6 +468,7 @@ main() {
                 return 0
                 ;;
             -q | --quiet)
+                # shellcheck disable=SC2034 # TODO: quiet mode not yet implemented
                 quiet=true
                 shift
                 ;;
