@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154 # PASS, FAIL are defined by common_core when sourced
 ###############################################################################
 # NAME         : bash.funcs.sh
 # DESCRIPTION  : A collection of useful functions for Bash.

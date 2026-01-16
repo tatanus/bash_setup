@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154 # ENGAGEMENT_DIR is set by user's pen-testing environment
+# shellcheck disable=SC2034 # Variables defined for future use in pen-testing workflow
 set -uo pipefail
 
 # =============================================================================

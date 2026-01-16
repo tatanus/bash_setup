@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034 # Variables may be used externally or conditionally
 set -uo pipefail
 
 # =============================================================================
