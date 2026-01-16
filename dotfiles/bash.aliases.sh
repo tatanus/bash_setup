@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154 # BASH_DIR, PROXY are set by parent shell environment
 set -uo pipefail
 
 # =============================================================================

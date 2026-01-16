@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154 # LOGS_DIR is set by user's environment
+# shellcheck disable=SC2034 # Variables may be used externally
 set -uo pipefail
 
 # =============================================================================

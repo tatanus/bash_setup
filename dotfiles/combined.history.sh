@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-
+# shellcheck disable=SC2154 # pipestatus is zsh-specific, set by the shell
+# shellcheck disable=SC2034 # Test function variables used for validation patterns
 # =============================================================================
 # NAME        : combined.history.sh
 # DESCRIPTION : Logs commands in Bash and Zsh interactive shells.
