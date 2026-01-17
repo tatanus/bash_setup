@@ -33,8 +33,8 @@ EXCLUDE_DIR=".claude"
 #===============================================================================
 # Logging Functions
 #===============================================================================
-info()  { printf '[INFO ] %s\n' "$*"; }
-error() { printf '[ERROR] %s\n' "$*" >&2; }
+function info() { printf '[INFO ] %s\n' "$*"; }
+function error() { printf '[ERROR] %s\n' "$*" >&2; }
 
 ###############################################################################
 # run_shellcheck
@@ -43,11 +43,11 @@ error() { printf '[ERROR] %s\n' "$*" >&2; }
 # Usage     : run_shellcheck
 # Returns   : Sets STYLE_FAIL=1 if ShellCheck reports errors
 ###############################################################################
-run_shellcheck() {
+function run_shellcheck() {
     info "Running ShellCheck..."
     # Use -prune to skip the excluded directory entirely
-    if ! find . -type d -name "${EXCLUDE_DIR}" -prune -o -type f -name "*.sh" -print0 \
-        | xargs -0 shellcheck --shell=bash --rcfile="${SHELLCHECK_RC}"; then
+    if ! find . -type d -name "${EXCLUDE_DIR}" -prune -o -type f -name "*.sh" -print0 |
+        xargs -0 shellcheck --shell=bash --rcfile="${SHELLCHECK_RC}"; then
         error "ShellCheck failed"
         STYLE_FAIL=1
     fi
@@ -60,11 +60,11 @@ run_shellcheck() {
 # Usage     : run_shfmt
 # Returns   : Sets STYLE_FAIL=1 if formatting issues found
 ###############################################################################
-run_shfmt() {
+function run_shfmt() {
     info "Checking formatting with shfmt..."
     # Use -prune to skip the excluded directory entirely
-    if ! find . -type d -name "${EXCLUDE_DIR}" -prune -o -type f -name "*.sh" -print0 \
-        | xargs -0 shfmt -d -i 4 -ci -bn -kp -sr -ln bash; then
+    if ! find . -type d -name "${EXCLUDE_DIR}" -prune -o -type f -name "*.sh" -print0 |
+        xargs -0 shfmt -d -i 4 -ci -bn -kp -sr -ln bash; then
         error "shfmt reported formatting issues"
         STYLE_FAIL=1
     fi
@@ -78,36 +78,36 @@ run_shfmt() {
 # Returns   : Sets STYLE_FAIL=1 if prohibited patterns found
 # Checks    : set -e, echo -e, backticks, for f in $(ls)
 ###############################################################################
-run_custom_checks() {
+function run_custom_checks() {
     info "Running custom regex style checks..."
 
     # Helper: filter out comment lines while keeping filename:line prefix
     local awk_filter="{ code=\$0; sub(/^[^:]+:[0-9]+:/,\"\",code); if (code !~ /^[[:space:]]*#/) print \$0 }"
 
     # Ban set -e / errexit
-    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" -E "set[[:space:]]+-?(e|eu)|set -o errexit" . \
-        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
+    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" -E "set[[:space:]]+-?(e|eu)|set -o errexit" . |
+        awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed use of 'set -e'"
         STYLE_FAIL=1
     fi
 
     # Ban echo -e
-    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" -E "echo[[:space:]]+-e" . \
-        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
+    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" -E "echo[[:space:]]+-e" . |
+        awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed 'echo -e'"
         STYLE_FAIL=1
     fi
 
     # Ban backticks
-    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" '`' . \
-        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
+    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" '`' . |
+        awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed backticks (use \$(...) instead)"
         STYLE_FAIL=1
     fi
 
     # Ban for f in $(ls)
-    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" -E "for[[:space:]]+f[[:space:]]+in[[:space:]]+\$\\(ls" . \
-        | awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
+    if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" -E "for[[:space:]]+f[[:space:]]+in[[:space:]]+\$\\(ls" . |
+        awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
         error "Found disallowed 'for f in \$(ls)'"
         STYLE_FAIL=1
     fi
@@ -120,7 +120,7 @@ run_custom_checks() {
 # Usage     : main "$@"
 # Returns   : PASS (0) if all checks pass, FAIL (1) otherwise
 ###############################################################################
-main() {
+function main() {
     run_shellcheck
     run_shfmt
     run_custom_checks

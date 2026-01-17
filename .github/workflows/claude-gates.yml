@@ -1,0 +1,74 @@
+name: Claude Policy Gates
+on:
+ pull_request:
+ push:
+ branches: [ "main" ]
+
+permissions:
+ contents: read
+ pull-requests: write
+
+jobs:
+ gates:
+ runs-on: ubuntu-latest
+ steps:
+ - name: Checkout
+ uses: actions/checkout@v4
+
+ - name: Install deps
+ run: |
+ sudo apt-get update
+ sudo apt-get install -y jq shellcheck python3
+ # shfmt via go install (pinned)
+ sudo apt-get install -y golang-go
+ go install mvdan.cc/sh/v3/cmd/shfmt@latest
+ echo "$HOME/go/bin" >> $GITHUB_PATH
+
+ - name: Verify bundle
+ run: |
+ ./.claude/tools/verify_bundle.sh | tee .claude/work/out/verify.json
+ jq -e '.status == "pass"' .claude/work/out/verify.json
+
+ - name: Run full project pipeline (deterministic)
+ run: |
+ mkdir -p .claude/work/out/ci
+ ./.claude/tools/run_project_pipeline.sh .claude/work/out/ci
+ cat .claude/work/out/ci/gates.json | jq .
+
+ - name: Upload artifacts
+ uses: actions/upload-artifact@v4
+ with:
+ name: claude-policy-gates
+ path: |
+ .claude/work/out/**
+
+ - name: Comment PR with gate results
+ if: ${{ github.event_name == 'pull_request' }}
+ env:
+ GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ run: |
+ PR_NUMBER="${{ github.event.pull_request.number }}"
+ mkdir -p .claude/work/out/ci
+ # Build comment body
+ {
+ echo "## Claude Policy Gates"
+ echo ""
+ echo "Artifact: claude-policy-gates (see workflow run)"
+ echo ""
+ if [ -f .claude/work/out/ci/gates.json ]; then
+ echo "### Gate Summary"
+ cat .claude/work/out/ci/gates.json | jq -r '.gates | to_entries[] | "- **" + .key + "**: " + .value.status'
+ fi
+ echo ""
+ if [ -f .claude/work/out/ci/repair_brief.txt ]; then
+ echo "### Repair Brief (excerpt)"
+ sed -n '1,120p' .claude/work/out/ci/repair_brief.txt
+ fi
+ } > .claude/work/out/ci/pr_comment.md
+
+ # Use gh for commenting
+ gh pr comment "$PR_NUMBER" --body-file .claude/work/out/ci/pr_comment.md
+
+ - name: Enforce gates (block merge on FAIL)
+ run: |
+ jq -e '.any_fail == false' .claude/work/out/ci/gates.json

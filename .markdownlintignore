@@ -1,0 +1,4 @@
+third_party/
+vendor/
+node_modules/
+.claude/

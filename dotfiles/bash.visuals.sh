@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034 # Color variables defined for completeness, used conditionally
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : bash.visuals.sh

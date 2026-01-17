@@ -1,8 +1,48 @@
+###############################################################################
+# Markdown Lint Configuration
+#
+# Philosophy:
+# - Enforce readability and consistency
+# - Do not fight auto-generated docs (CLAUDE.md, CHANGELOG.md)
+# - CI-safe, PR-comment friendly
+###############################################################################
+
+# Default: enable all rules
 default: true
+
+# Line length: allow long lines for URLs, code, and tables
 MD013:
-  line_length: 100
+  line_length: 120
+  tables: false
   code_blocks: false
+
+# Allow multiple headings with same content (common in changelogs)
 MD024:
   siblings_only: true
+
+# Allow inline HTML (used occasionally in GitHub docs)
 MD033: false
-MD041: false
+
+# Require fenced code blocks with language
+MD040: true
+
+# Enforce consistent list indentation
+MD007:
+  indent: 2
+
+# Allow trailing spaces in Markdown (used for hard line breaks)
+MD009:
+  br_spaces: 2
+  strict: false
+
+# Allow emphasis used for visual emphasis in docs
+MD036: false
+
+# Ordered list style
+MD029:
+  style: ordered
+
+# Enforce single top-level heading
+MD025:
+  level: 1
+

@@ -25,16 +25,16 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
     # Fallback Logging Functions (only define if not already declared)
     #===============================================================================
     if ! declare -F info > /dev/null 2>&1; then
-        function info() { printf '[INFO ] %s\n' "${1}";  }
+        function info() { printf '[INFO ] %s\n' "${1}"; }
     fi
     if ! declare -F warn > /dev/null 2>&1; then
-        function warn() { printf '[WARN ] %s\n' "${1}";  }
+        function warn() { printf '[WARN ] %s\n' "${1}"; }
     fi
     if ! declare -F error > /dev/null 2>&1; then
-        function error() { printf '[ERROR] %s\n' "${1}";  }
+        function error() { printf '[ERROR] %s\n' "${1}"; }
     fi
     if ! declare -F fail > /dev/null 2>&1; then
-        function fail() { printf '[FAIL ] %s\n' "${1}";  }
+        function fail() { printf '[FAIL ] %s\n' "${1}"; }
     fi
 
     ###############################################################################
@@ -114,7 +114,7 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
                 printf '%s\n' "windows"
                 return "${PASS}"
                 ;;
-            *)  ;;
+            *) ;;
         esac
 
         if [[ "${uname_output}" == "Linux" ]]; then
@@ -283,8 +283,8 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
                 -l) eza_cmd+=("-l" "--group") ;;
                 -t)
                     eza_cmd+=("--sort=modified")
-                                                  has_t=true
-                                                             ;;
+                    has_t=true
+                    ;;
                 -S) eza_cmd+=("--sort=size") ;;
                 -F) eza_cmd+=("--classify") ;;
                 -r) has_r=true ;;
@@ -391,7 +391,7 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
                     error "Invalid option: -${OPTARG}"
                     return "${FAIL}"
                     ;;
-                *)  ;;
+                *) ;;
             esac
         done
         shift $((OPTIND - 1))
@@ -441,7 +441,7 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
                         clipboard_source="xclip -selection clipboard -o"
                     fi
                     ;;
-                *)  ;;
+                *) ;;
             esac
 
             if [[ -z "${clipboard_source}" ]]; then

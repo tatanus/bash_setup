@@ -1,49 +1,123 @@
-# Specify the default shell for ShellCheck to analyze scripts
+###############################################################################
+# .shellcheckrc
+#
+# Purpose:
+#   Enforce secure, deterministic, and portable Bash 4+ scripting practices.
+#   Designed for CI enforcement and security-sensitive automation.
+#
+# Philosophy:
+#   - Bash-first, zsh-best-effort
+#   - No hidden control flow
+#   - No masked failures
+#   - No undefined behavior
+#   - No reliance on `set -e`
+#   - Explicit error handling
+#   - Array-safe argument passing
+###############################################################################
+
+#------------------------------------------------------------------------------
+# Shell dialect and version
+#------------------------------------------------------------------------------
 shell=bash
+bash-version=4
 
-# Allow sourcing files not explicitly passed to ShellCheck
-external-sources=true
+#------------------------------------------------------------------------------
+# Treat style issues as errors in CI
+#------------------------------------------------------------------------------
+severity=style
 
-source-path=SCRIPTDIR
+#------------------------------------------------------------------------------
+# Enable all checks (we selectively relax below if justified)
+#------------------------------------------------------------------------------
+#enable=all
 
-# Enable specific style and best practice recommendations
-# Suggest adding a default case in `case` statements
-enable=add-default-case
+#------------------------------------------------------------------------------
+# Enforced Safety & Correctness Rules (DO NOT DISABLE)
+#------------------------------------------------------------------------------
 
-# https://github.com/koalaman/shellcheck/wiki/SC2244
-enable=avoid-nullary-conditions
+# Quote variables to prevent word splitting and globbing
+#   SC2086: Double quote to prevent globbing and word splitting
+#   SC2046: Quote this to prevent word splitting
+#   SC2164: cd must be checked
+#   SC2155: Declare and assign separately to avoid masking return values
+#   SC2154: Unassigned variables (set -u discipline)
+#   SC2034: Unused variables (dead code detection)
+#   SC2317: Unreachable / dead code
+#   SC2181: Check exit codes explicitly, do not rely on $?
+#   SC2312: set -e masking failures (documents your explicit ban)
+#   SC2015: Logical operator misuse (cmd1 && cmd2 || cmd3 pitfalls)
+#   SC2128: Expanding arrays without index
+#   SC2206: Unsafe array splitting
+#   SC2230: Use command -v instead of which
+#   SC2001: Prefer parameter expansion over external sed
+#   SC2039: Non-POSIX extensions
+#   SC2310: Signal handling robustness
+#   SC3043: local variable scoping
+#   SC3054: Associative array portability
+#   SC3057: Prefer printf over echo
+#   SC3003: Bashisms in sh
+#   SC3004: pipefail portability notes
 
-# Suggest explicitly using -n in `[ $var ]`
-enable=avoid-nullary-conditions
+#------------------------------------------------------------------------------
+# Dynamic sourcing policy
+#------------------------------------------------------------------------------
+# Allow dynamic sourcing only with explicit annotation:
+#   # shellcheck source=/absolute/path
+disable=SC1090,SC1091
 
-# Notify when 'set -e' is suppressed during function invocation
-enable=check-set-e-suppressed
+#------------------------------------------------------------------------------
+# Rare, controlled deviations (require comment justification in code)
+#------------------------------------------------------------------------------
 
-# Warn about uppercase variables that are unassigned
-enable=check-unassigned-uppercase
+# SC2162: read without -r (only if escape processing is intended)
+#disable=SC2162
 
-# Suggest using 'command -v' instead of 'which' for portability
-enable=deprecate-which
+# SC2294: eval usage (only for heavily audited metaprogramming)
+#disable=SC2294
 
-# Suggest quoting variables that don't contain metacharacters
-enable=quote-safe-variables
+#------------------------------------------------------------------------------
+# Formatting & readability
+#------------------------------------------------------------------------------
 
-# Recommend ${VAR} in place of $VAR for variable clarity
-enable=require-variable-braces
+# Enforce modern Bash constructs
+enable=require-variable-braces,require-double-brackets,deprecate-which,quote-safe-variables,add-default-case,avoid-nullary-conditions,check-set-e-suppressed,check-unassigned-uppercase,SC2035,SC2148,SC2231
+#enable=require-variable-braces     # ${VAR} instead of $VAR
+#enable=require-double-brackets    # [[ ... ]] instead of [ ... ]
+#enable=deprecate-which            # command -v over which
+#enable=quote-safe-variables       # quote even "safe" variables
+#enable=add-default-case           # require default in case
+#enable=avoid-nullary-conditions   # avoid [ "$var" ] ambiguity
+#enable=check-set-e-suppressed     # detect masked set -e
+#enable=check-unassigned-uppercase # catch typos in constants
 
-# Require [[ over [ for Bash/Ksh scripts
-enable=require-double-brackets
+#------------------------------------------------------------------------------
+# Security foot-gun prevention
+#------------------------------------------------------------------------------
 
+enable=SC2035   # .* in rm (can delete too much)
+enable=SC2148   # Missing or bad shebang
+enable=SC2231   # Loop condition logic errors
 
+#------------------------------------------------------------------------------
+# Function semantics policy
+#------------------------------------------------------------------------------
 
-# Additional rules
-enable=SC2035   # Warn against .* in commands like rm
-enable=SC2148   # Ensure valid shebang
-enable=SC2231   # Warn about loop condition issues
+# Enforced by external gates:
+#   - Must use: function name()
+#   - Must have proc-doc blocks
+#   - Must not use: name()
+# ShellCheck assists but syntax gate is authoritative.
 
-# Disable specific warnings
-disable=SC1090  # Allow sourcing dynamic/non-constant files
-disable=SC1091  # Allow sourcing files that may not exist
-disable=SC2034  # Allow unused variables
-disable=SC2181  # Allow $? exit code checks
-disable=SC2154  # Allow unassigned variable warnings
+#------------------------------------------------------------------------------
+# CI determinism
+#------------------------------------------------------------------------------
+
+# Require explicit existence of sourced files (except where annotated)
+# Prevents host-dependent behavior and makes pipelines reproducible.
+
+#------------------------------------------------------------------------------
+# Optional: Exclude generated or vendor directories
+#------------------------------------------------------------------------------
+# exclude=vendor/,dist/,build/,node_modules/
+###############################################################################
+

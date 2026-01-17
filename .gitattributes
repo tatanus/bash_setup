@@ -1,2 +1,44 @@
+###############################################################################
+# .gitattributes
+#
+# Purpose:
+# - Enforce LF endings
+# - Ensure consistent diffs
+# - Protect binary files
+# - Enable clean CI and patch application
+###############################################################################
+
 * text=auto eol=lf
-*.sh linguist-language=Shell
+
+*.sh  text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+*.bats text eol=lf
+
+*.md text eol=lf
+*.txt text eol=lf
+
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+.github/workflows/*.yml text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.svg  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.tar  binary
+*.gz   binary
+*.tgz  binary
+*.7z   binary
+
+*.jar  binary
+*.war  binary
+
+third_party/** -text
+vendor/** -text

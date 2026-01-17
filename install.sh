@@ -19,10 +19,10 @@ IFS=$'\n\t'
 #===============================================================================
 # Minimal Logging (until common_core is loaded)
 #===============================================================================
-_log_fail() { printf '[%s] [- FAIL  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; }
-_log_pass() { printf '[%s] [+ PASS  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
-_log_info() { printf '[%s] [* INFO  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
-_log_warn() { printf '[%s] [! WARN  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; }
+function _log_fail() { printf '[%s] [- FAIL  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; }
+function _log_pass() { printf '[%s] [+ PASS  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
+function _log_info() { printf '[%s] [* INFO  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
+function _log_warn() { printf '[%s] [! WARN  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; }
 
 #===============================================================================
 # Constants
@@ -101,7 +101,7 @@ readonly -a RECOMMENDED_TOOLS=(
 # Usage    : usage
 # Returns  : Always returns 0
 ###############################################################################
-usage() {
+function usage() {
     cat << EOF
 ${SCRIPT_NAME} v${VERSION} - Bash environment dotfiles manager
 
@@ -141,7 +141,7 @@ EOF
 # Returns  : Number of errors found (0 = all checks passed)
 # Checks   : Bash version, HOME variable, common_core installation
 ###############################################################################
-preflight_checks() {
+function preflight_checks() {
     local errors=0
 
     # Check Bash version
@@ -183,7 +183,7 @@ preflight_checks() {
 # Returns  : 0 on success, 1 on failure
 # Requires : COMMON_CORE_UTIL variable set
 ###############################################################################
-load_common_core() {
+function load_common_core() {
     # shellcheck source=/dev/null
     if source "${COMMON_CORE_UTIL}"; then
         pass "Loaded common_core utilities"
@@ -202,7 +202,7 @@ load_common_core() {
 # Returns  : Number of directories that failed to create
 # Requires : REQUIRED_DIRECTORIES array, common_core logging functions
 ###############################################################################
-setup_directories() {
+function setup_directories() {
     info "Creating required directories..."
     local failed=0
 
@@ -228,7 +228,7 @@ setup_directories() {
 # Returns  : Always returns 0 (tools are optional)
 # Requires : RECOMMENDED_TOOLS array, cmd::exists from common_core
 ###############################################################################
-check_recommended_tools() {
+function check_recommended_tools() {
     info "Checking recommended tools..."
 
     for tool in "${RECOMMENDED_TOOLS[@]}"; do
@@ -251,11 +251,11 @@ check_recommended_tools() {
 # Returns  : 0 if files differ (or dest missing), 1 if identical
 # Requires : sha256sum or shasum command
 ###############################################################################
-files_differ() {
+function files_differ() {
     local src="$1"
     local dest="$2"
 
-    [[ ! -f "${dest}" ]] && return 0  # Dest doesn't exist = different
+    [[ ! -f "${dest}" ]] && return 0 # Dest doesn't exist = different
 
     local src_sum dest_sum
     if cmd::exists "sha256sum"; then
@@ -282,7 +282,7 @@ files_differ() {
 # Returns  : 0 on success, 1 on failure
 # Requires : common_core file::copy function
 ###############################################################################
-cmd_install() {
+function cmd_install() {
     local skip_tools="${1:-false}"
 
     info "Starting installation..."
@@ -347,7 +347,7 @@ cmd_install() {
 # Returns  : 0 on success, 1 on failure
 # Requires : common_core file::copy function, files_differ function
 ###############################################################################
-cmd_update() {
+function cmd_update() {
     info "Checking for updates..."
 
     local src_dir="${SCRIPT_DIR}/dotfiles"
@@ -408,7 +408,7 @@ cmd_update() {
 # Returns  : 0 always
 # Requires : common_core file::restore_old_backup function
 ###############################################################################
-cmd_uninstall() {
+function cmd_uninstall() {
     info "Restoring original dotfiles..."
 
     local restored=0
@@ -446,7 +446,7 @@ cmd_uninstall() {
 # Usage    : main "$@"
 # Returns  : 0 on success, 1 on failure
 ###############################################################################
-main() {
+function main() {
     local command="install"
     local skip_tools=false
     # shellcheck disable=SC2034 # TODO: quiet mode not yet implemented

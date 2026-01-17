@@ -1,13 +1,16 @@
 # tests/helpers/common.bash
 # Shared helpers for bats tests
 
+set -uo pipefail
+IFS=$'\n\t'
+
 # Simple predicate
 function function_exists() {
-  local fn="${1:-}"
-  if [[ -z "${fn}" ]]; then
-    return 1
-  fi
-  declare -F "${fn}" >/dev/null 2>&1
+    local fn="${1:-}"
+    if [[ -z "${fn}" ]]; then
+        return 1
+    fi
+    declare -F "${fn}" > /dev/null 2>&1
 }
 
 # Stub logging functions if missing (so sourcing repo files won't fail)
@@ -22,12 +25,12 @@ repo_root="$(cd "$(dirname "${BATS_TEST_FILENAME}")/.." && pwd)"
 export REPO_ROOT="${repo_root}"
 
 # temp HOME helpers
-setup_temp_home() {
-  export TEST_HOME="$(mktemp -d)"
-  export HOME="${TEST_HOME}"
-  mkdir -p "${HOME}/.config/bash/log" >/dev/null 2>&1 || true
+function setup_temp_home() {
+    export TEST_HOME="$(mktemp -d)"
+    export HOME="${TEST_HOME}"
+    mkdir -p "${HOME}/.config/bash/log" > /dev/null 2>&1 || true
 }
 
-teardown_temp_home() {
-  rm -rf "${TEST_HOME}"
+function teardown_temp_home() {
+    rm -rf "${TEST_HOME}"
 }

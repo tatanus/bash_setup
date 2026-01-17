@@ -1,76 +1,92 @@
-# Logs and temp files
-*.log
-*.tmp
-*.bak
+###############################################################################
+# .gitignore
+#
+# Purpose:
+# - Keep repo clean
+# - Prevent CI / workspace artifacts from leaking
+# - Avoid committing secrets, caches, or generated files
+###############################################################################
+
+# OS / Editor
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
-*~
+*.bak
+*.tmp
+*.orig
+*.rej
+*.log
 
-# Compiled output
-*.out
-*.o
-*.so
-*.a
-*.la
-
-# PyCharm IDE directories
+# IDEs
+.vscode/
 .idea/
+*.iml
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.venv/
+venv/
+.env
+.env.*
 
-# Sublime Text settings
-*.sublime-workspace
-*.sublime-project
+# Go
+bin/
+pkg/
+*.exe
+*.out
+*.test
 
-# System files
-.DS_Store
-Thumbs.db
-.DS_Store
-**/.DS_Store
-._*  
+# Ruby
+.bundle/
+vendor/bundle/
+*.gem
 
-# Shell history and temp files
-.history
-.history_all
-*.sh~
-*.sh.bak
-*.sh.swp
-
-# Backup and cache files
-*.backup
-*.cache
-.cache/
-*.save
-*.old
-
-# Debugging files
-*.debug
-*.core
-*.stackdump
-
-# Node.js/Package-related (if applicable)
+# Node
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Python virtual environments (if applicable)
-env/
-venv/
+# Bash / Test Artifacts
+coverage/
+test-results/
+*.cov
+*.lcov
 
-# Configuration files (optional, depending on project needs)
-*.env
-*.config
-
-# AI directories (internal pipeline state)
+# Claude System Workspace
 .claude/
-CLAUDE.md
+# Patch & diff artifacts
+*.diff
+*.patch
 
-# Generated files
+# Build outputs
 dist/
 build/
+out/
 
-.state/
-outputs/
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
 
-menu_timestamps
+# Secrets
+*.key
+*.pem
+*.crt
+secrets.yml
+secrets.json
+
+# Local override configs
+.local.env
+.env.local
+
+# macOS quarantine
+*.DS_Store
+
+.claude
