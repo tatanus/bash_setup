@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2154 # pipestatus is zsh-specific, set by the shell
 # shellcheck disable=SC2034 # Test function variables used for validation patterns
+set -uo pipefail
+IFS=$'\n\t'
 # =============================================================================
 # NAME        : combined.history.sh
 # DESCRIPTION : Logs commands in Bash and Zsh interactive shells.
@@ -111,11 +113,11 @@ fi
 # =============================================================================
 # Fallback logging if logger not provided
 # =============================================================================
-if ! declare -f info  > /dev/null; then function info() { printf '[* INFO  ] %s\n' "${1}"; }; fi
-if ! declare -f warn  > /dev/null; then function warn() { printf '[! WARN  ] %s\n' "${1}" >&2; }; fi
+if ! declare -f info > /dev/null; then function info() { printf '[* INFO  ] %s\n' "${1}"; }; fi
+if ! declare -f warn > /dev/null; then function warn() { printf '[! WARN  ] %s\n' "${1}" >&2; }; fi
 if ! declare -f error > /dev/null; then function error() { printf '[- ERROR ] %s\n' "${1}" >&2; }; fi
-if ! declare -f pass  > /dev/null; then function pass() { printf '[+ PASS  ] %s\n' "${1}"; }; fi
-if ! declare -f fail  > /dev/null; then function fail() { printf '[! FAIL  ] %s\n' "${1}" >&2; }; fi
+if ! declare -f pass > /dev/null; then function pass() { printf '[+ PASS  ] %s\n' "${1}"; }; fi
+if ! declare -f fail > /dev/null; then function fail() { printf '[! FAIL  ] %s\n' "${1}" >&2; }; fi
 if ! declare -f debug > /dev/null; then function debug() { printf '[# DEBUG ] %s\n' "${1}"; }; fi
 
 # =============================================================================
@@ -483,13 +485,13 @@ EOF
             bash)
                 # Use parameter expansion instead of sed for better performance
                 command="$(history 1)"
-                command="${command#"${command%%[![:space:]]*}"}"  # ltrim
-                command="${command#*[0-9] }"  # Remove leading number
-                command="${command#*] }"      # Remove timestamp if present
+                command="${command#"${command%%[![:space:]]*}"}" # ltrim
+                command="${command#*[0-9] }"                     # Remove leading number
+                command="${command#*] }"                         # Remove timestamp if present
                 ;;
             zsh)
                 command="$(fc -ln -1)"
-                command="${command#"${command%%[![:space:]]*}"}"  # ltrim
+                command="${command#"${command%%[![:space:]]*}"}" # ltrim
                 ;;
             *)
                 command=""
@@ -537,13 +539,13 @@ EOF
 
         # Escape dangerous characters to prevent command injection
         # Using tr to remove control chars, then parameter expansion for safety
-        local cleaned="${raw//\\/\\\\}"      # escape backslashes
-        cleaned="${cleaned//\"/\\\"}"        # escape double quotes
-        cleaned="${cleaned//\'/\\\'}"        # escape single quotes
-        cleaned="${cleaned//${bt}/\\${bt}}"  # escape backticks (using hex var)
-        cleaned="${cleaned//\$/\\\$}"        # escape $ to prevent expansion
-        cleaned="${cleaned//\(/\\\(}"        # escape opening parenthesis
-        cleaned="${cleaned//\)/\\\)}"        # escape closing parenthesis
+        local cleaned="${raw//\\/\\\\}"     # escape backslashes
+        cleaned="${cleaned//\"/\\\"}"       # escape double quotes
+        cleaned="${cleaned//\'/\\\'}"       # escape single quotes
+        cleaned="${cleaned//${bt}/\\${bt}}" # escape backticks (using hex var)
+        cleaned="${cleaned//\$/\\\$}"       # escape $ to prevent expansion
+        cleaned="${cleaned//\(/\\\(}"       # escape opening parenthesis
+        cleaned="${cleaned//\)/\\\)}"       # escape closing parenthesis
 
         # Strip control characters
         cleaned="$(printf '%s' "${cleaned}" | tr -d '[:cntrl:]')"
@@ -633,21 +635,16 @@ EOF
         write_log_entry "${log_line}"
     }
 
-    # =============================================================================
+    ###############################################################################
     # trace_run
-    #==============================
-    # Runs a script under tracing (set -x), logging each executed command
-    # to the main log and an optional per-run trace log.
-    #
-    # Usage:
-    #   trace_run <script_path> [args...]
-    #
-    # Return Values:
-    #   0 = success
-    #   1 = invalid arguments
-    #   2 = script not executable
-    #   3 = failed permissions on log file
-    # =============================================================================
+    #------------------------------------------------------------------------------
+    # Purpose  : Run a script under tracing (set -x), logging each command
+    # Usage    : trace_run <script_path> [args...]
+    # Arguments:
+    #   $1 : script_path - Path to script to trace
+    #   $@ : args - Optional arguments to pass to script
+    # Returns  : 0 success, 1 invalid args, 2 not executable, 3 log permissions
+    ###############################################################################
     function trace_run() {
         local target_script shell_type timestamp per_run_log session_info rc
         local interpreter first_line
@@ -758,16 +755,13 @@ EOF
         return "${rc}"
     }
 
-    # =============================================================================
+    ###############################################################################
     # test_logging_setup
-    # ------------------
-    # Test mode to validate that:
-    # - log file is writable
-    # - flock is available
-    # - syslog is working (if enabled)
-    # - logrotate config exists (if enabled)
-    # - log entries can be written
-    # =============================================================================
+    #------------------------------------------------------------------------------
+    # Purpose  : Validate logging setup (file, flock, syslog, logrotate)
+    # Usage    : test_logging_setup
+    # Returns  : 0 if all tests pass, 1 on failure
+    ###############################################################################
     function test_logging_setup() {
         local test_message logrotate_file test_line test_random
 

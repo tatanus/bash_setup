@@ -2,6 +2,7 @@
 # shellcheck disable=SC2154 # LOGS_DIR is set by user's environment
 # shellcheck disable=SC2034 # Variables may be used externally
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : tmux.aliases.sh
@@ -25,6 +26,15 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
     #####
     # ------------------------------------------- #
 
+    ###############################################################################
+    # tmux
+    #------------------------------------------------------------------------------
+    # Purpose  : Wrapper for tmux with logging support for new sessions
+    # Usage    : tmux [new -s session_name] [options]
+    # Arguments:
+    #   Passes through all arguments to tmux command
+    # Returns  : tmux exit code
+    ###############################################################################
     function tmux() {
         debug "\$@=" "$@"
 
@@ -80,7 +90,15 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
         fi
     }
 
-    # Create a tmux session with logging
+    ###############################################################################
+    # tmuxS
+    #------------------------------------------------------------------------------
+    # Purpose  : Create or attach to a tmux session with logging enabled
+    # Usage    : tmuxS <session_name>
+    # Arguments:
+    #   $1 : session_name - Name of the tmux session
+    # Returns  : 0 on success
+    ###############################################################################
     function tmuxS() {
         local session_name="$1"
         local log_file="${LOGS_DIR}/${session_name}.tmux"
@@ -101,8 +119,15 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
         tmux list-sessions -F '#{session_name}'
     }
 
-    # Verify if a given session exists
-    # ARG1 = session name
+    ###############################################################################
+    # does_tmux_session_exist
+    #------------------------------------------------------------------------------
+    # Purpose  : Check if a given tmux session exists
+    # Usage    : does_tmux_session_exist <session_name>
+    # Arguments:
+    #   $1 : session_name - Name of the tmux session to check
+    # Returns  : 0 if exists, 1 if not found
+    ###############################################################################
     function does_tmux_session_exist() {
         local sess="$1"
         if [[ -z "${sess}" ]]; then
@@ -118,9 +143,16 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
         return 1 # Session does not exist
     }
 
-    # Execute a command on a given session
-    # ARG 1 = session to execute on
-    # ARG 2 = command to execute
+    ###############################################################################
+    # exec_cmd_in_tmux_session
+    #------------------------------------------------------------------------------
+    # Purpose  : Execute a command in a specific tmux session
+    # Usage    : exec_cmd_in_tmux_session <session> <cmd>
+    # Arguments:
+    #   $1 : session - Name of the tmux session
+    #   $2 : cmd - Command to execute
+    # Returns  : 0 on success
+    ###############################################################################
     function exec_cmd_in_tmux_session() {
         local session="$1"
         local cmd="$2"
@@ -134,8 +166,15 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
         fi
     }
 
-    # Loop over all sessions and run a specified command
-    # ARG 1 = command to execute
+    ###############################################################################
+    # exec_on_all_tmux_sessions
+    #------------------------------------------------------------------------------
+    # Purpose  : Execute a command on all active tmux sessions
+    # Usage    : exec_on_all_tmux_sessions <cmd>
+    # Arguments:
+    #   $1 : cmd - Command to execute on all sessions
+    # Returns  : 0 on completion
+    ###############################################################################
     function exec_on_all_tmux_sessions() {
         local cmd="$1"
         for session in $(get_tmux_session_list); do
@@ -143,9 +182,16 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
         done
     }
 
-    # Create a new session in a specified directory
-    # ARG 1 = session name
-    # ARG 2 = directory to start in
+    ###############################################################################
+    # create_tmux_session
+    #------------------------------------------------------------------------------
+    # Purpose  : Create a new tmux session in a specified directory
+    # Usage    : create_tmux_session <session_name> <directory>
+    # Arguments:
+    #   $1 : session_name - Name for the new session
+    #   $2 : directory - Directory to start the session in
+    # Returns  : 0 on success, 1 on error
+    ###############################################################################
     function create_tmux_session() {
         local session="$1"
         local directory="$2"
@@ -174,7 +220,13 @@ if [[ -z "${TMUX_ALIAS_SH_LOADED:-}" ]]; then
         pass "Tmux session [${session}] successfully created"
     }
 
-    # Interactive selection of a tmux session
+    ###############################################################################
+    # t
+    #------------------------------------------------------------------------------
+    # Purpose  : Interactive menu to select and attach to a tmux session
+    # Usage    : t
+    # Returns  : 0 on success
+    ###############################################################################
     function t() {
         PS3="Select an Option: "
         select session_name in $(get_tmux_session_list); do

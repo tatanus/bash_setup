@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : ssh.aliases.sh
@@ -23,6 +24,15 @@ if [[ -z "${SSH_ALIASES_SH_LOADED:-}" ]]; then
         return $?
     }
 
+    ###############################################################################
+    # sshfs_mount
+    #------------------------------------------------------------------------------
+    # Purpose  : Mount a remote filesystem via SSHFS
+    # Usage    : sshfs_mount <target_system>
+    # Arguments:
+    #   $1 : target_system - Name of the remote system to mount
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function sshfs_mount() {
         local TARGET_SYSTEM="$1"
 
@@ -68,6 +78,15 @@ if [[ -z "${SSH_ALIASES_SH_LOADED:-}" ]]; then
         fi
     }
 
+    ###############################################################################
+    # sshfs_unmount
+    #------------------------------------------------------------------------------
+    # Purpose  : Unmount an SSHFS-mounted remote filesystem
+    # Usage    : sshfs_unmount <target_system>
+    # Arguments:
+    #   $1 : target_system - Name of the remote system to unmount
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function sshfs_unmount() {
         local TARGET_SYSTEM="$1"
 

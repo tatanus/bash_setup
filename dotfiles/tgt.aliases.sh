@@ -2,6 +2,7 @@
 # shellcheck disable=SC2154 # ENGAGEMENT_DIR is set by user's pen-testing environment
 # shellcheck disable=SC2034 # Variables defined for future use in pen-testing workflow
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : tgt.aliases.sh
@@ -31,15 +32,15 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         }
     fi
 
-    # =============================================================================
-    # Function: getTGT
-    # Description:
-    #   Obtains a Ticket Granting Ticket (TGT) using getTGT.py.
-    # Parameters:
-    #   $1 - Arguments for getTGT.py.
-    # Returns:
-    #   0 on success, 1 on failure.
-    # =============================================================================
+    ###############################################################################
+    # getTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Obtain a Ticket Granting Ticket (TGT) using getTGT.py
+    # Usage    : getTGT <domain>/<user>:<pass> -dc-ip <dc>
+    # Arguments:
+    #   $@ : Arguments passed to getTGT.py
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function getTGT() {
         if [[ $# -lt 3 ]]; then
             info "Usage: getTGT <domain>/<username>:<password> -dc-ip <dc> -or- <domain>/<username> -hashes <ntlm> -dc-ip <dc>"
@@ -65,15 +66,15 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         saveTGT "${filename}"
     }
 
-    # =============================================================================
-    # Function: saveTGT
-    # Description:
-    #   Saves a TGT (ccache) file to the specified directory.
-    # Parameters:
-    #   $1 - Path to the TGT file to save.
-    # Returns:
-    #   0 on success, 1 on failure.
-    # =============================================================================
+    ###############################################################################
+    # saveTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Save a TGT (ccache) file to the TGT directory
+    # Usage    : saveTGT <file>
+    # Arguments:
+    #   $1 : file - Path to the TGT file to save
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function saveTGT() {
         if [[ $# -ne 1 ]]; then
             info "Usage: saveTGT <file>"
@@ -102,11 +103,13 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         info "TGT file saved to ${TGT_DIR}."
     }
 
-    # =============================================================================
-    # Function: listTGT
-    # Description:
-    #   Lists TGT files in the specified directory and allows exporting via fzf.
-    # =============================================================================
+    ###############################################################################
+    # listTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : List TGT files and allow interactive selection via fzf
+    # Usage    : listTGT
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function listTGT() {
         if [[ ! -d "${TGT_DIR}" ]]; then
             fail "TGT directory does not exist."
@@ -148,11 +151,15 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         return 1
     }
 
-    # =============================================================================
-    # Function: validateTGT
-    # Description:
-    #   Validates a TGT file and checks its expiration time.
-    # =============================================================================
+    ###############################################################################
+    # validateTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Validate a TGT file and check its expiration time
+    # Usage    : validateTGT <file>
+    # Arguments:
+    #   $1 : file - Path to the TGT file to validate
+    # Returns  : 0 if valid, 1 if expired or error
+    ###############################################################################
     function validateTGT() {
         if [[ $# -ne 1 ]]; then
             info "Usage: validateTGT <file>"
@@ -176,7 +183,15 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         echo "${tgt_file}: Valid (Expires: ${end_time})"
     }
 
-    # Function to export a TGT file
+    ###############################################################################
+    # exportTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Export a TGT file by setting KRB5CCNAME
+    # Usage    : exportTGT <full_path>
+    # Arguments:
+    #   $1 : full_path - Full path to the TGT file
+    # Returns  : 0 on success, 1 on error
+    ###############################################################################
     function exportTGT() {
         # Check the number of arguments
         # Usage: exportTGT <full_path_and_filename>
@@ -188,7 +203,15 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         export KRB5CCNAME="$1"
     }
 
-    # Function to renew a TGT
+    ###############################################################################
+    # renewTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Renew a Kerberos TGT using kinit or renewTGT.py
+    # Usage    : renewTGT <ccache>
+    # Arguments:
+    #   $1 : ccache - Path to the credential cache file
+    # Returns  : 0 on success
+    ###############################################################################
     function renewTGT() {
         # Check the number of arguments
         # Usage: renewTGT <ccache>
@@ -208,7 +231,13 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         fi
     }
 
-    # Function to renew all TGT files in ~/.ccache
+    ###############################################################################
+    # renewAllTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Renew all TGT files in the TGT directory
+    # Usage    : renewAllTGT
+    # Returns  : 0 on success, 1 if no TGTs found
+    ###############################################################################
     function renewAllTGT() {
         # Check if directory exists
         if [[ ! -d "${TGT_DIR}" ]]; then
@@ -233,7 +262,15 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         done
     }
 
-    # Function to test TGT files against a domain controller
+    ###############################################################################
+    # testTGTs
+    #------------------------------------------------------------------------------
+    # Purpose  : Test TGT files against a domain controller
+    # Usage    : testTGTs <dc-ip>
+    # Arguments:
+    #   $1 : dc-ip - IP address of the domain controller
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     function testTGTs() {
         # Check the number of arguments
         # Usage: textTGTs <dc-ip>
@@ -265,7 +302,13 @@ if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
         done
     }
 
-    # Function to validate all TGT files in ~/.ccache
+    ###############################################################################
+    # validateAllTGT
+    #------------------------------------------------------------------------------
+    # Purpose  : Validate all TGT files in the TGT directory
+    # Usage    : validateAllTGT
+    # Returns  : 0 on completion
+    ###############################################################################
     function validateAllTGT() {
         # Check if directory exists
         if [[ ! -d "${TGT_DIR}" ]]; then
