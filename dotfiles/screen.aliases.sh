@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : screen.aliases.sh
@@ -30,6 +31,15 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
     #####
     # ------------------------------------------- #
 
+    ###############################################################################
+    # screen
+    #------------------------------------------------------------------------------
+    # Purpose  : Wrapper for GNU screen with logging support
+    # Usage    : screen [-S session_name] [options]
+    # Arguments:
+    #   -S : session_name - Name for the screen session
+    # Returns  : 0 on success
+    ###############################################################################
     function screen() {
         # Initialize variables
         local session_name=""
@@ -71,6 +81,15 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         screen -ls | grep tached | awk '{ print $1 }'
     }
 
+    ###############################################################################
+    # does_screen_session_exist
+    #------------------------------------------------------------------------------
+    # Purpose  : Check if a given screen session exists
+    # Usage    : does_screen_session_exist <session_name>
+    # Arguments:
+    #   $1 : session_name - Name of the screen session to check
+    # Returns  : 0 if session exists, 1 if not found or error
+    ###############################################################################
     function does_screen_session_exist() {
         # This function checks if a given screen session exists.
         # It takes one argument:
@@ -92,6 +111,16 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         return 1 # Session does not exist
     }
 
+    ###############################################################################
+    # exec_cmd_in_screen_session
+    #------------------------------------------------------------------------------
+    # Purpose  : Execute a command in a specific screen session
+    # Usage    : exec_cmd_in_screen_session <session> <cmd>
+    # Arguments:
+    #   $1 : session - Name of the screen session
+    #   $2 : cmd - Command to execute
+    # Returns  : 0 on success
+    ###############################################################################
     function exec_cmd_in_screen_session() {
         # This function executes a command on a given screen session.
         # It takes two arguments:
@@ -111,6 +140,15 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         fi
     }
 
+    ###############################################################################
+    # exec_on_all_screen_sessions
+    #------------------------------------------------------------------------------
+    # Purpose  : Execute a command on all active screen sessions
+    # Usage    : exec_on_all_screen_sessions <cmd>
+    # Arguments:
+    #   $1 : cmd - Command to execute on all sessions
+    # Returns  : 0 on completion
+    ###############################################################################
     function exec_on_all_screen_sessions() {
         # This function executes a specified command on all active screen sessions.
         # It takes one argument:
@@ -138,7 +176,15 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         local window_index=0
         local commands=()
 
-        # Recursive function to find the leaf processes and capture their commands
+        ###############################################################################
+        # find_leaves
+        #------------------------------------------------------------------------------
+        # Purpose  : Recursively find leaf processes and capture their commands
+        # Usage    : find_leaves <pid>
+        # Arguments:
+        #   $1 : pid - Process ID to start from
+        # Returns  : Populates commands array with leaf process commands
+        ###############################################################################
         function find_leaves() {
             local p="$1"
             local children=()
@@ -183,7 +229,16 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
     # Export the get_commands function for use in subshells
     export -f _get_pid_commands
 
-    # Function to truncate a string to a specified maximum length (default: 63)
+    ###############################################################################
+    # truncate_string
+    #------------------------------------------------------------------------------
+    # Purpose  : Truncate a string to a specified maximum length
+    # Usage    : truncate_string <string> [max_length]
+    # Arguments:
+    #   $1 : string - The string to truncate
+    #   $2 : max_length - Maximum length (default: 63)
+    # Returns  : Prints truncated string to stdout
+    ###############################################################################
     function truncate_string() {
         local str="$1"
         local max="${2:-63}"
@@ -196,7 +251,13 @@ if [[ -z "${SCREEN_ALIAS_AH_LOADED:-}" ]]; then
         fi
     }
 
-    # Function to display the current command running in all screen sessions
+    ###############################################################################
+    # show_all_screen_commands_and_select
+    #------------------------------------------------------------------------------
+    # Purpose  : Display commands in all screen sessions and allow selection
+    # Usage    : show_all_screen_commands_and_select
+    # Returns  : 0 on success, 1 if no sessions found
+    ###############################################################################
     function show_all_screen_commands_and_select() {
         # Capture the list of active screen sessions
         IFS=$'\n' read -r -d '' -a session_list < <(get_screen_session_list && printf '\0')

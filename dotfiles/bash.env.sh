@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : bash.env.sh
@@ -36,7 +37,15 @@ if [[ -z "${BASH_ENV_SH_LOADED:-}" ]]; then
     # define colors for Linux
     export LS_COLORS="di=34:ln=35:so=32:pi=33:ex=31:bd=34:cd=34:su=0;41:sg=0;46:tw=0;42:ow=33"
 
-    # Helper function: Check command availability
+    ###############################################################################
+    # _check_command
+    #------------------------------------------------------------------------------
+    # Purpose  : Check if a command is available in PATH
+    # Usage    : _check_command <command>
+    # Arguments:
+    #   $1 : command - Name of the command to check
+    # Returns  : 0 if available, 1 if not found
+    ###############################################################################
     function _check_command() {
         if ! command -v "$1" &> /dev/null; then
             echo "$1 is not installed or not functional. Some functionality may not work."

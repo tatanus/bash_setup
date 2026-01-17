@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+IFS=$'\n\t'
 
 # =============================================================================
 # NAME        : capture_traffic.sh
@@ -30,7 +31,13 @@ if [[ -z "${CAPTURETRAFFIC_SH_LOADED:-}" ]]; then
     # Helper Functions
     # =============================================================================
 
-    # Check if tshark is available
+    ###############################################################################
+    # check_tshark
+    #------------------------------------------------------------------------------
+    # Purpose  : Verify tshark is installed and available in PATH
+    # Usage    : check_tshark
+    # Returns  : Exits with 1 if tshark not found
+    ###############################################################################
     check_tshark() {
         if [[ -z "${TSHARK_CMD}" ]]; then
             fail "tshark is not installed or not in PATH." >&2
@@ -38,7 +45,18 @@ if [[ -z "${CAPTURETRAFFIC_SH_LOADED:-}" ]]; then
         fi
     }
 
-    # Validate and parse arguments
+    ###############################################################################
+    # parse_capture_args
+    #------------------------------------------------------------------------------
+    # Purpose  : Parse and validate capture_traffic command line arguments
+    # Usage    : parse_capture_args <src_ip> <dst_ip> <src_port> <dst_port> [opts]
+    # Arguments:
+    #   $1 : src_ip - Source IP address
+    #   $2 : dst_ip - Destination IP address
+    #   $3 : src_port - Source port
+    #   $4 : dst_port - Destination port
+    # Returns  : Sets global variables; exits on error
+    ###############################################################################
     parse_capture_args() {
         if [[ $# -lt 4 ]]; then
             info "Usage: $0 <src_ip> <dst_ip> <src_port> <dst_port> [-t <seconds>] [-m <messages>] [--interface <iface>]" >&2
@@ -91,6 +109,18 @@ if [[ -z "${CAPTURETRAFFIC_SH_LOADED:-}" ]]; then
     # Main Function
     # =============================================================================
 
+    ###############################################################################
+    # capture_traffic
+    #------------------------------------------------------------------------------
+    # Purpose  : Capture network traffic between two IP:port pairs using tshark
+    # Usage    : capture_traffic <src_ip> <dst_ip> <src_port> <dst_port> [options]
+    # Arguments:
+    #   $1 : src_ip - Source IP address
+    #   $2 : dst_ip - Destination IP address
+    #   $3 : src_port - Source port
+    #   $4 : dst_port - Destination port
+    # Returns  : 0 on success, 1 on failure
+    ###############################################################################
     capture_traffic() {
         # Parse arguments
         parse_capture_args "$@"

@@ -21,22 +21,22 @@ readonly yellow='\033[33m'
 readonly red='\033[91m'
 readonly reset='\033[0m'
 
-log_info() { printf '%b[* INFO  ]%b %s\n' "${blue}" "${reset}" "$*"; }
-log_pass() { printf '%b[+ PASS  ]%b %s\n' "${green}" "${reset}" "$*"; }
-log_warn() { printf '%b[! WARN  ]%b %s\n' "${yellow}" "${reset}" "$*"; }
-log_fail() { printf '%b[- FAIL  ]%b %s\n' "${red}" "${reset}" "$*"; }
+function log_info() { printf '%b[* INFO  ]%b %s\n' "${blue}" "${reset}" "$*"; }
+function log_pass() { printf '%b[+ PASS  ]%b %s\n' "${green}" "${reset}" "$*"; }
+function log_warn() { printf '%b[! WARN  ]%b %s\n' "${yellow}" "${reset}" "$*"; }
+function log_fail() { printf '%b[- FAIL  ]%b %s\n' "${red}" "${reset}" "$*"; }
 
 trap 'log_fail "Unexpected error at ${BASH_SOURCE[0]##*/}:${LINENO}"; exit 1' ERR
 
 #=============================== Prerequisites ================================#
-require_bin() {
+function require_bin() {
     if ! command -v "${1}" > /dev/null 2>&1; then
         log_fail "Missing required command: ${1}"
         exit 1
     fi
 }
 
-ensure_git_repo() {
+function ensure_git_repo() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         log_fail "Not inside a Git repository."
         exit 1
@@ -44,32 +44,54 @@ ensure_git_repo() {
 }
 
 #=============================== CI/Test steps ================================#
-run_ci() {
+function run_ci() {
     log_info 'Running CI (format + lint + tests)...'
     make ci
     log_pass 'CI completed.'
 }
 
-run_tests() {
+###############################################################################
+# run_tests
+#------------------------------------------------------------------------------
+# Purpose  : Execute the project test suite via make
+# Usage    : run_tests
+# Returns  : 0 on success (make test exit code)
+###############################################################################
+function run_tests() {
     log_info 'Running test suite...'
     make test
     log_pass 'Tests completed (or skipped if none present).'
 }
 
 #=========================== Versioning & releasing ===========================#
-read_version() {
+
+###############################################################################
+# read_version
+#------------------------------------------------------------------------------
+# Purpose  : Read and return the current version from VERSION file
+# Usage    : ver=$(read_version)
+# Returns  : Prints version string to stdout; empty if VERSION not found
+###############################################################################
+function read_version() {
     if [[ -f VERSION ]]; then
         sed -n '1{s/^[[:space:]]*//;p;q}' VERSION
     fi
 }
 
-write_version() {
+function write_version() {
     local ver="${1:?missing version}"
     printf '%s\n' "${ver}" > VERSION
     git add VERSION
 }
 
-bump_patch_version() {
+###############################################################################
+# bump_patch_version
+#------------------------------------------------------------------------------
+# Purpose  : Increment the patch component of the version (X.Y.Z -> X.Y.Z+1)
+# Usage    : new_ver=$(bump_patch_version)
+# Returns  : Prints new version string to stdout; writes to VERSION file
+###############################################################################
+function bump_patch_version() {
     local current next major minor patch
     if [[ -f VERSION ]]; then
         current="$(< VERSION)"
@@ -91,11 +113,20 @@ bump_patch_version() {
     printf '%s' "${next}"
 }
 
-validate_semver() {
+function validate_semver() {
     [[ "${1-}" =~ ^[0-9]+(\.[0-9]+){2}$ ]]
 }
 
-update_citation_for_release() {
+###############################################################################
+# update_citation_for_release
+#------------------------------------------------------------------------------
+# Purpose  : Update CITATION.cff with new version and release date
+# Usage    : update_citation_for_release "1.2.3"
+# Arguments:
+#   $1 : version - SemVer string (required)
+# Returns  : 0 on success; skips gracefully if CITATION.cff not found
+###############################################################################
+function update_citation_for_release() {
     local ver="${1:?missing version}" d tmp
     d="$(date +%F)"
     [[ -f CITATION.cff ]] || {
@@ -126,7 +157,16 @@ update_citation_for_release() {
     log_info "CITATION.cff updated to ${ver} (${d})."
 }
 
-update_changelog_for_release() {
+###############################################################################
+# update_changelog_for_release
+#------------------------------------------------------------------------------
+# Purpose  : Update CHANGELOG.md with a new version section
+# Usage    : update_changelog_for_release "1.2.3"
+# Arguments:
+#   $1 : version - SemVer string (required)
+# Returns  : 0 on success; creates CHANGELOG.md if not found
+###############################################################################
+function update_changelog_for_release() {
     local ver="${1:?missing version}" d chlog tmp
     d="$(date +%F)"
     chlog="CHANGELOG.md"
@@ -184,7 +224,17 @@ EOF
 }
 
 #======================== Release notes / changelog ===========================#
-generate_release_notes() {
+
+###############################################################################
+# generate_release_notes
+#------------------------------------------------------------------------------
+# Purpose  : Generate release notes and update changelog using git-cliff
+# Usage    : generate_release_notes "1.2.3"
+# Arguments:
+#   $1 : version - SemVer string (required)
+# Returns  : 0 on success; 1 if git-cliff not available
+###############################################################################
+function generate_release_notes() {
     local ver="${1:?missing version}"
     require_bin git
 
@@ -220,7 +270,15 @@ generate_release_notes() {
 }
 
 #=============================== Commit & Push ================================#
-prompt_commit_msg() {
+
+###############################################################################
+# prompt_commit_msg
+#------------------------------------------------------------------------------
+# Purpose  : Interactively prompt user for a git commit message
+# Usage    : msg=$(prompt_commit_msg)
+# Returns  : Prints commit message to stdout; exits 1 if empty
+###############################################################################
+function prompt_commit_msg() {
     local msg
     printf '\n'
     read -r -p 'Enter git commit message: ' msg
@@ -231,7 +289,14 @@ prompt_commit_msg() {
     printf '%s' "${msg}"
 }
 
-do_commit_and_push() {
+###############################################################################
+# do_commit_and_push
+#------------------------------------------------------------------------------
+# Purpose  : Stage all changes, bump version, commit with message, and push
+# Usage    : do_commit_and_push
+# Returns  : 0 on success; exits on error
+###############################################################################
+function do_commit_and_push() {
     ensure_git_repo
 
     log_info 'Staging changes...'
@@ -257,7 +322,17 @@ do_commit_and_push() {
 }
 
 #================================= Release ===================================#
-do_release() {
+
+###############################################################################
+# do_release
+#------------------------------------------------------------------------------
+# Purpose  : Full release workflow: version, changelog, commit, tag, push
+# Usage    : do_release [version]
+# Arguments:
+#   $1 : version - Optional SemVer; auto-bumps patch if omitted
+# Returns  : 0 on success; exits on error
+###############################################################################
+function do_release() {
     ensure_git_repo
 
     git add -A
@@ -311,7 +386,18 @@ do_release() {
 }
 
 #=================================== Main ====================================#
-main() {
+
+###############################################################################
+# main
+#------------------------------------------------------------------------------
+# Purpose  : Entry point - dispatch to test/commit/release subcommands
+# Usage    : main <subcommand> [args]
+# Arguments:
+#   $1 : subcommand - test|commit|release|help
+#   $2 : version - Optional version for release subcommand
+# Returns  : 0 on success; 2 on invalid subcommand
+###############################################################################
+function main() {
     require_bin git
     require_bin make
     require_bin awk
