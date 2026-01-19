@@ -17,12 +17,32 @@ set -uo pipefail
 IFS=$'\n\t'
 
 #===============================================================================
-# Minimal Logging (until common_core is loaded)
+# Logging Fallbacks
 #===============================================================================
-function _log_fail() { printf '[%s] [- FAIL  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; }
-function _log_pass() { printf '[%s] [+ PASS  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
-function _log_info() { printf '[%s] [* INFO  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*"; }
-function _log_warn() { printf '[%s] [! WARN  ] %s\n' "$(date +'%Y-%m-%d %H:%M:%S')" "$*" >&2; }
+if ! declare -F info > /dev/null 2>&1; then
+    function info()  { printf '[INFO ] %s\n' "${*}" >&2; }
+fi
+if ! declare -F warn > /dev/null 2>&1; then
+    function warn()  { printf '[WARN ] %s\n' "${*}" >&2; }
+fi
+if ! declare -F error > /dev/null 2>&1; then
+    function error() { printf '[ERROR] %s\n' "${*}" >&2; }
+fi
+if ! declare -F debug > /dev/null 2>&1; then
+    function debug() { printf '[DEBUG] %s\n' "${*}" >&2; }
+fi
+if ! declare -F pass > /dev/null 2>&1; then
+    function pass()  { printf '[PASS ] %s\n' "${*}" >&2; }
+fi
+if ! declare -F fail > /dev/null 2>&1; then
+    function fail()  { printf '[FAIL ] %s\n' "${*}" >&2; }
+fi
+
+#===============================================================================
+# Globals
+#===============================================================================
+: "${PASS:=0}"
+: "${FAIL:=1}"
 
 #===============================================================================
 # Constants
@@ -43,7 +63,7 @@ readonly VERSION
 readonly COMMON_CORE_DIR="${HOME}/.config/bash/lib/common_core"
 readonly COMMON_CORE_UTIL="${COMMON_CORE_DIR}/util.sh"
 readonly BASH_DIR="${HOME}/.config/bash"
-readonly BASH_LOG_DIR="${BASH_DIR}/log"
+readonly BASHDIR="${BASH_DIR}/log"
 readonly DATA_DIR="${HOME}/DATA"
 
 #===============================================================================
@@ -81,7 +101,7 @@ readonly -a BASH_DOT_FILES=(
 readonly -a REQUIRED_DIRECTORIES=(
     "${DATA_DIR}/LOGS"
     "${BASH_DIR}"
-    "${BASH_LOG_DIR}"
+    "${BASHDIR}"
 )
 
 readonly -a RECOMMENDED_TOOLS=(
@@ -146,29 +166,29 @@ function preflight_checks() {
 
     # Check Bash version
     if [[ -z "${BASH_VERSION:-}" ]]; then
-        _log_fail "This script must be run under Bash."
+        fail "This script must be run under Bash."
         ((errors++))
     elif [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
-        _log_fail "Bash 4.0+ required. Current: ${BASH_VERSION}"
+        fail "Bash 4.0+ required. Current: ${BASH_VERSION}"
         ((errors++))
     fi
 
     # Check HOME
     if [[ -z "${HOME:-}" ]]; then
-        _log_fail "HOME environment variable not set."
+        fail "HOME environment variable not set."
         ((errors++))
     fi
 
     # Check common_core
     if [[ ! -d "${COMMON_CORE_DIR}" ]]; then
-        _log_fail "common_core library not found at: ${COMMON_CORE_DIR}"
-        _log_fail ""
-        _log_fail "Please install common_core first:"
-        _log_fail "  1. Clone: git clone https://github.com/tatanus/common_core.git"
-        _log_fail "  2. Run its installer or copy to: ${COMMON_CORE_DIR}"
+        fail "common_core library not found at: ${COMMON_CORE_DIR}"
+        fail ""
+        fail "Please install common_core first:"
+        fail "  1. Clone: git clone https://github.com/tatanus/common_core.git"
+        fail "  2. Run its installer or copy to: ${COMMON_CORE_DIR}"
         ((errors++))
     elif [[ ! -f "${COMMON_CORE_UTIL}" ]]; then
-        _log_fail "common_core util.sh not found at: ${COMMON_CORE_UTIL}"
+        fail "common_core util.sh not found at: ${COMMON_CORE_UTIL}"
         ((errors++))
     fi
 
@@ -189,7 +209,7 @@ function load_common_core() {
         pass "Loaded common_core utilities"
         return 0
     else
-        _log_fail "Failed to source common_core"
+        fail "Failed to source common_core"
         return 1
     fi
 }
@@ -481,7 +501,7 @@ function main() {
                 shift
                 ;;
             *)
-                _log_fail "Unknown option: $1"
+                fail "Unknown option: $1"
                 usage >&2
                 return 1
                 ;;
