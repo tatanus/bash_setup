@@ -11,16 +11,25 @@
 # ------------|----------------|------------------------------------------------
 # 2024-12-16  | Adam Compton   | Initial creation
 # 2025-01-09  | Adam Compton   | Consolidated from SetupBash.sh and menu_tasks.sh
+# 2026-01-19  | Adam Compton   | Hardened contracts, fixed preflight logic,
+#                              | logging fallbacks, and common_core API checks
 ###############################################################################
 
 set -uo pipefail
 IFS=$'\n\t'
 
 #===============================================================================
+# Globals
+#===============================================================================
+: "${QUIET:=false}"
+: "${PASS:=0}"
+: "${FAIL:=1}"
+
+#===============================================================================
 # Logging Fallbacks
 #===============================================================================
 if ! declare -F info > /dev/null 2>&1; then
-    function info()  { printf '[INFO ] %s\n' "${*}" >&2; }
+    function info()  { [[ "${QUIET}" == "true" ]] && return 0; printf '[INFO ] %s\n' "${*}" >&2; }
 fi
 if ! declare -F warn > /dev/null 2>&1; then
     function warn()  { printf '[WARN ] %s\n' "${*}" >&2; }
@@ -29,20 +38,14 @@ if ! declare -F error > /dev/null 2>&1; then
     function error() { printf '[ERROR] %s\n' "${*}" >&2; }
 fi
 if ! declare -F debug > /dev/null 2>&1; then
-    function debug() { printf '[DEBUG] %s\n' "${*}" >&2; }
+    function debug() { [[ "${QUIET}" == "true" ]] && return 0; printf '[DEBUG] %s\n' "${*}" >&2; }
 fi
 if ! declare -F pass > /dev/null 2>&1; then
-    function pass()  { printf '[PASS ] %s\n' "${*}" >&2; }
+    function pass()  { [[ "${QUIET}" == "true" ]] && return 0; printf '[PASS ] %s\n' "${*}" >&2; }
 fi
 if ! declare -F fail > /dev/null 2>&1; then
     function fail()  { printf '[FAIL ] %s\n' "${*}" >&2; }
 fi
-
-#===============================================================================
-# Globals
-#===============================================================================
-: "${PASS:=0}"
-: "${FAIL:=1}"
 
 #===============================================================================
 # Constants
@@ -63,8 +66,9 @@ readonly VERSION
 readonly COMMON_CORE_DIR="${HOME}/.config/bash/lib/common_core"
 readonly COMMON_CORE_UTIL="${COMMON_CORE_DIR}/util.sh"
 readonly BASH_DIR="${HOME}/.config/bash"
-readonly BASHDIR="${BASH_DIR}/log"
+readonly BASH_LOG_DIR="${BASH_DIR}/log"
 readonly DATA_DIR="${HOME}/DATA"
+readonly DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
 
 #===============================================================================
 # Dotfile Lists
@@ -101,7 +105,7 @@ readonly -a BASH_DOT_FILES=(
 readonly -a REQUIRED_DIRECTORIES=(
     "${DATA_DIR}/LOGS"
     "${BASH_DIR}"
-    "${BASHDIR}"
+    "${BASH_LOG_DIR}"
 )
 
 readonly -a RECOMMENDED_TOOLS=(
@@ -113,6 +117,12 @@ readonly -a RECOMMENDED_TOOLS=(
     "duf"
     "btop"
 )
+
+#===============================================================================
+# Capability flags (populated in preflight)
+#===============================================================================
+HAS_SHA256_TOOL="false"
+SHA256_TOOL="" # "sha256sum" or "shasum"
 
 ###############################################################################
 # usage
@@ -150,6 +160,9 @@ REQUIREMENTS:
     - Bash 4.0+
     - common_core library at: ${COMMON_CORE_DIR}
 
+NOTES:
+    - If neither sha256sum nor shasum exists, update mode will treat all files as "different"
+      and overwrite targets (a warning will be emitted).
 EOF
 }
 
@@ -164,7 +177,7 @@ EOF
 function preflight_checks() {
     local errors=0
 
-    # Check Bash version
+    # Bash version
     if [[ -z "${BASH_VERSION:-}" ]]; then
         fail "This script must be run under Bash."
         ((errors++))
@@ -173,26 +186,47 @@ function preflight_checks() {
         ((errors++))
     fi
 
-    # Check HOME
+    # HOME sanity
     if [[ -z "${HOME:-}" ]]; then
         fail "HOME environment variable not set."
         ((errors++))
+    elif [[ ! -d "${HOME}" ]]; then
+        fail "HOME does not exist or is not a directory: ${HOME}"
+        ((errors++))
     fi
 
-    # Check common_core
+    # common_core presence
     if [[ ! -d "${COMMON_CORE_DIR}" ]]; then
         fail "common_core library not found at: ${COMMON_CORE_DIR}"
-        fail ""
-        fail "Please install common_core first:"
-        fail "  1. Clone: git clone https://github.com/tatanus/common_core.git"
-        fail "  2. Run its installer or copy to: ${COMMON_CORE_DIR}"
+        fail "Install common_core first (example):"
+        fail "  git clone https://github.com/tatanus/common_core.git"
+        fail "  then run its installer / copy into: ${COMMON_CORE_DIR}"
         ((errors++))
     elif [[ ! -f "${COMMON_CORE_UTIL}" ]]; then
         fail "common_core util.sh not found at: ${COMMON_CORE_UTIL}"
         ((errors++))
     fi
 
-    return "${errors}"
+    # Repo layout
+    if [[ ! -d "${DOTFILES_DIR}" ]]; then
+        fail "Dotfiles directory not found: ${DOTFILES_DIR}"
+        ((errors++))
+    fi
+
+    # Capability detection: SHA-256
+    if command -v sha256sum >/dev/null 2>&1; then
+        HAS_SHA256_TOOL="true"
+        SHA256_TOOL="sha256sum"
+    elif command -v shasum >/dev/null 2>&1; then
+        HAS_SHA256_TOOL="true"
+        SHA256_TOOL="shasum"
+    else
+        HAS_SHA256_TOOL="false"
+        SHA256_TOOL=""
+        warn "No sha256sum or shasum found; update mode will overwrite without checksum equality checks."
+    fi
+
+    [[ "${errors}" -eq 0 ]]
 }
 
 ###############################################################################
@@ -204,14 +238,33 @@ function preflight_checks() {
 # Requires : COMMON_CORE_UTIL variable set
 ###############################################################################
 function load_common_core() {
+    # Force clean bootstrap even if already sourced in this shell
+    unset COMMON_CORE_INITIALIZED 2>/dev/null || true
+
     # shellcheck source=/dev/null
-    if source "${COMMON_CORE_UTIL}"; then
-        pass "Loaded common_core utilities"
-        return 0
-    else
-        fail "Failed to source common_core"
+    if ! source "${COMMON_CORE_UTIL}"; then
+        fail "Failed to source common_core: ${COMMON_CORE_UTIL}"
         return 1
     fi
+
+    # Verify required symbols exist (older common_core versions can differ)
+    local required_funcs=(
+        cmd::exists
+        file::copy
+        file::restore_old_backup
+        info warn debug pass fail
+    )
+
+    local f
+    for f in "${required_funcs[@]}"; do
+        if ! declare -F "${f}" >/dev/null 2>&1; then
+            fail "common_core is missing required function: ${f}"
+            return 1
+        fi
+    done
+
+    pass "Loaded common_core utilities"
+    return 0
 }
 
 ###############################################################################
@@ -225,6 +278,7 @@ function load_common_core() {
 function setup_directories() {
     info "Creating required directories..."
     local failed=0
+    local dir=""
 
     for dir in "${REQUIRED_DIRECTORIES[@]}"; do
         if [[ -d "${dir}" ]]; then
@@ -237,7 +291,7 @@ function setup_directories() {
         fi
     done
 
-    return "${failed}"
+    [[ "${failed}" -eq 0 ]]
 }
 
 ###############################################################################
@@ -250,6 +304,7 @@ function setup_directories() {
 ###############################################################################
 function check_recommended_tools() {
     info "Checking recommended tools..."
+    local tool=""
 
     for tool in "${RECOMMENDED_TOOLS[@]}"; do
         if cmd::exists "${tool}"; then
@@ -258,6 +313,8 @@ function check_recommended_tools() {
             warn "Missing: ${tool} (optional)"
         fi
     done
+
+    return 0
 }
 
 ###############################################################################
@@ -275,17 +332,23 @@ function files_differ() {
     local src="$1"
     local dest="$2"
 
-    [[ ! -f "${dest}" ]] && return 0 # Dest doesn't exist = different
+    [[ ! -f "${dest}" ]] && return 0
 
-    local src_sum dest_sum
-    if cmd::exists "sha256sum"; then
-        src_sum=$(sha256sum "${src}" 2> /dev/null | cut -d' ' -f1)
-        dest_sum=$(sha256sum "${dest}" 2> /dev/null | cut -d' ' -f1)
-    elif cmd::exists "shasum"; then
-        src_sum=$(shasum -a 256 "${src}" 2> /dev/null | cut -d' ' -f1)
-        dest_sum=$(shasum -a 256 "${dest}" 2> /dev/null | cut -d' ' -f1)
+    # If no SHA tool, treat as different (caller may overwrite)
+    if [[ "${HAS_SHA256_TOOL}" != "true" ]]; then
+        return 0
+    fi
+
+    local src_sum="" dest_sum=""
+
+    if [[ "${SHA256_TOOL}" == "sha256sum" ]]; then
+        src_sum="$(sha256sum "${src}" 2>/dev/null | cut -d' ' -f1)"
+        dest_sum="$(sha256sum "${dest}" 2>/dev/null | cut -d' ' -f1)"
+    elif [[ "${SHA256_TOOL}" == "shasum" ]]; then
+        src_sum="$(shasum -a 256 "${src}" 2>/dev/null | cut -d' ' -f1)"
+        dest_sum="$(shasum -a 256 "${dest}" 2>/dev/null | cut -d' ' -f1)"
     else
-        # Fallback: always consider different if no checksum tool
+        # Defensive fallback
         return 0
     fi
 
@@ -307,21 +370,13 @@ function cmd_install() {
 
     info "Starting installation..."
 
-    # Create directories
     setup_directories || return 1
 
-    # Check source directory
-    local src_dir="${SCRIPT_DIR}/dotfiles"
-    if [[ ! -d "${src_dir}" ]]; then
-        fail "Dotfiles directory not found: ${src_dir}"
-        return 1
-    fi
-
-    # Install common dotfiles to HOME
     info "Installing common dotfiles to ${HOME}..."
+    local file="" src="" dest=""
     for file in "${COMMON_DOT_FILES[@]}"; do
-        local src="${src_dir}/${file}"
-        local dest="${HOME}/.${file}"
+        src="${DOTFILES_DIR}/${file}"
+        dest="${HOME}/.${file}"
 
         if [[ ! -f "${src}" ]]; then
             warn "Source not found: ${src}"
@@ -331,11 +386,10 @@ function cmd_install() {
         file::copy "${src}" "${dest}"
     done
 
-    # Install bash dotfiles to BASH_DIR
     info "Installing bash dotfiles to ${BASH_DIR}..."
     for file in "${BASH_DOT_FILES[@]}"; do
-        local src="${src_dir}/${file}"
-        local dest="${BASH_DIR}/${file}"
+        src="${DOTFILES_DIR}/${file}"
+        dest="${BASH_DIR}/${file}"
 
         if [[ ! -f "${src}" ]]; then
             warn "Source not found: ${src}"
@@ -345,12 +399,13 @@ function cmd_install() {
         file::copy "${src}" "${dest}"
     done
 
-    # Check recommended tools
+    # Configure screen based on version
+    setup_screenrc || return 1
+
     if [[ "${skip_tools}" != "true" ]]; then
         check_recommended_tools
     fi
 
-    # Source new bashrc
     if [[ -f "${HOME}/.bashrc" ]]; then
         info "To apply changes, run: source ~/.bashrc"
     fi
@@ -370,19 +425,12 @@ function cmd_install() {
 function cmd_update() {
     info "Checking for updates..."
 
-    local src_dir="${SCRIPT_DIR}/dotfiles"
-    if [[ ! -d "${src_dir}" ]]; then
-        fail "Dotfiles directory not found: ${src_dir}"
-        return 1
-    fi
-
     local updated=0
+    local file="" src="" dest=""
 
-    # Update common dotfiles
     for file in "${COMMON_DOT_FILES[@]}"; do
-        local src="${src_dir}/${file}"
-        local dest="${HOME}/.${file}"
-
+        src="${DOTFILES_DIR}/${file}"
+        dest="${HOME}/.${file}"
         [[ ! -f "${src}" ]] && continue
 
         if files_differ "${src}" "${dest}"; then
@@ -394,11 +442,9 @@ function cmd_update() {
         fi
     done
 
-    # Update bash dotfiles
     for file in "${BASH_DOT_FILES[@]}"; do
-        local src="${src_dir}/${file}"
-        local dest="${BASH_DIR}/${file}"
-
+        src="${DOTFILES_DIR}/${file}"
+        dest="${BASH_DIR}/${file}"
         [[ ! -f "${src}" ]] && continue
 
         if files_differ "${src}" "${dest}"; then
@@ -417,6 +463,9 @@ function cmd_update() {
         info "To apply changes, run: source ~/.bashrc"
     fi
 
+    # Configure screen based on version
+    setup_screenrc || return 1
+
     return 0
 }
 
@@ -432,18 +481,17 @@ function cmd_uninstall() {
     info "Restoring original dotfiles..."
 
     local restored=0
+    local file="" target=""
 
-    # Restore common dotfiles
     for file in "${COMMON_DOT_FILES[@]}"; do
-        local target="${HOME}/.${file}"
+        target="${HOME}/.${file}"
         if [[ -f "${target}" ]]; then
             file::restore_old_backup "${target}" && ((restored++))
         fi
     done
 
-    # Restore bash dotfiles
     for file in "${BASH_DOT_FILES[@]}"; do
-        local target="${BASH_DIR}/${file}"
+        target="${BASH_DIR}/${file}"
         if [[ -f "${target}" ]]; then
             file::restore_old_backup "${target}" && ((restored++))
         fi
@@ -460,6 +508,49 @@ function cmd_uninstall() {
 }
 
 ###############################################################################
+# setup_screenrc
+#------------------------------------------------------------------------------
+# Purpose  : Install correct ~/.screenrc based on installed screen major version
+# Usage    : setup_screenrc
+# Returns  : 0 on success or if screen not installed, 1 on error
+###############################################################################
+function setup_screenrc() {
+    if ! cmd::exists screen; then
+        warn "GNU screen not found; skipping ~/.screenrc setup."
+        return 0
+    fi
+
+    local version major src dest
+    version="$(screen --version 2>/dev/null | awk '{print $NF}')"
+    major="${version%%.*}"
+    dest="${HOME}/.screenrc"
+
+    case "${major}" in
+        4)
+            src="${HOME}/.screenrc_v4"
+            ;;
+        5)
+            src="${HOME}/.screenrc_v5"
+            ;;
+        *)
+            warn "Unsupported screen version: ${version}; skipping ~/.screenrc setup."
+            return 0
+            ;;
+    esac
+
+    if [[ ! -f "${src}" ]]; then
+        fail "Expected screen config not found: ${src}"
+        return 1
+    fi
+
+    info "Installing screen config for screen ${version} -> ${dest}"
+    file::copy "${src}" "${dest}"
+    pass "Configured ~/.screenrc for screen ${major}.x"
+
+    return 0
+}
+
+###############################################################################
 # main
 #------------------------------------------------------------------------------
 # Purpose  : Main entry point - parse arguments and execute commands
@@ -468,36 +559,33 @@ function cmd_uninstall() {
 ###############################################################################
 function main() {
     local command="install"
-    local skip_tools=false
-    # shellcheck disable=SC2034 # TODO: quiet mode not yet implemented
-    local quiet=false
+    local skip_tools="false"
+    local force="false"
 
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            install | update | uninstall)
+            install|update|uninstall)
                 command="$1"
                 shift
                 ;;
-            -h | --help)
+            -h|--help)
                 usage
                 return 0
                 ;;
-            -v | --version)
+            -v|--version)
                 echo "${SCRIPT_NAME} v${VERSION}"
                 return 0
                 ;;
-            -q | --quiet)
-                # shellcheck disable=SC2034 # TODO: quiet mode not yet implemented
-                quiet=true
+            -q|--quiet)
+                QUIET="true"
                 shift
                 ;;
-            -f | --force)
-                # Force mode - currently same as install
+            -f|--force)
+                force="true"
                 shift
                 ;;
             --skip-tools)
-                skip_tools=true
+                skip_tools="true"
                 shift
                 ;;
             *)
@@ -508,27 +596,22 @@ function main() {
         esac
     done
 
-    # Preflight checks
-    if ! preflight_checks; then
-        return 1
+    # Preflight checks (fixed: correct boolean handling)
+    preflight_checks || return 1
+
+    # Load common_core and validate API
+    load_common_core || return 1
+
+    # NOTE: If your common_core file::copy supports a force flag, you can
+    # standardize that via an env var or wrapper. This script does not assume it.
+    if [[ "${force}" == "true" ]]; then
+        warn "--force was requested. If common_core honors a force mode via env/flags, ensure it is enabled there."
     fi
 
-    # Load common_core
-    if ! load_common_core; then
-        return 1
-    fi
-
-    # Execute command
     case "${command}" in
-        install)
-            cmd_install "${skip_tools}"
-            ;;
-        update)
-            cmd_update
-            ;;
-        uninstall)
-            cmd_uninstall
-            ;;
+        install)   cmd_install "${skip_tools}" ;;
+        update)    cmd_update ;;
+        uninstall) cmd_uninstall ;;
         *)
             fail "Unknown command: ${command}"
             return 1
