@@ -6,31 +6,7 @@ load '../load.bash'
 
 setup() {
   setup_temp_home
-  # Create mock common_core
-  mkdir -p "${HOME}/.config/bash/lib/common_core"
-
-  cat > "${HOME}/.config/bash/lib/common_core/util.sh" << 'EOF'
-#!/usr/bin/env bash
-info() { printf '[* INFO  ] %s\n' "$*"; }
-warn() { printf '[! WARN  ] %s\n' "$*" >&2; }
-fail() { printf '[- FAIL  ] %s\n' "$*" >&2; }
-pass() { printf '[+ PASS  ] %s\n' "$*"; }
-debug() { printf '[. DEBUG ] %s\n' "$*"; }
-
-cmd::exists() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-file::copy() {
-  local src="$1"
-  local dest="$2"
-  cp "${src}" "${dest}"
-}
-EOF
-  chmod +x "${HOME}/.config/bash/lib/common_core/util.sh"
-
-  # Source install.sh functions for testing
-  # We'll test via the update command which uses files_differ
+  create_mock_common_core
 }
 
 teardown() {

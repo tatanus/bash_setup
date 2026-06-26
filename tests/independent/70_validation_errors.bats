@@ -39,22 +39,8 @@ load '../load.bash'
 
 # Boundary: Empty command line (should default to install)
 @test "install.sh with no arguments defaults to install command" {
-  # This test verifies behavior rather than success
-  # We expect it to try install and fail on preflight if common_core not in test HOME
-
   setup_temp_home
-  mkdir -p "${HOME}/.config/bash/lib/common_core"
-  cat > "${HOME}/.config/bash/lib/common_core/util.sh" << 'EOF'
-#!/usr/bin/env bash
-info() { printf '[* INFO  ] %s\n' "$*"; }
-warn() { printf '[! WARN  ] %s\n' "$*" >&2; }
-fail() { printf '[- FAIL  ] %s\n' "$*" >&2; }
-pass() { printf '[+ PASS  ] %s\n' "$*"; }
-debug() { printf '[. DEBUG ] %s\n' "$*"; }
-cmd::exists() { command -v "$1" >/dev/null 2>&1; }
-file::copy() { cp "$1" "$2"; pass "Copied: $1 -> $2"; }
-EOF
-  chmod +x "${HOME}/.config/bash/lib/common_core/util.sh"
+  create_mock_common_core
 
   run bash "${REPO_ROOT}/install.sh" --skip-tools
 
@@ -101,15 +87,7 @@ EOF
 # Boundary: Options after command
 @test "install.sh accepts options after command" {
   setup_temp_home
-  mkdir -p "${HOME}/.config/bash/lib/common_core"
-  cat > "${HOME}/.config/bash/lib/common_core/util.sh" << 'EOF'
-#!/usr/bin/env bash
-info() { printf '[* INFO  ] %s\n' "$*"; }
-pass() { printf '[+ PASS  ] %s\n' "$*"; }
-cmd::exists() { command -v "$1" >/dev/null 2>&1; }
-file::copy() { cp "$1" "$2" 2>/dev/null || true; }
-EOF
-  chmod +x "${HOME}/.config/bash/lib/common_core/util.sh"
+  create_mock_common_core
 
   run bash "${REPO_ROOT}/install.sh" install --skip-tools
 
@@ -154,7 +132,11 @@ EOF
   run grep -q "preflight_checks" "${REPO_ROOT}/install.sh"
   [ "$status" -eq 0 ]
 
-  # Verify it's called in main
-  run grep -A 20 "^main()" "${REPO_ROOT}/install.sh" | grep -q "preflight_checks"
+  # Verify it's called within the body of main(). The project mandates the
+  # `function name() { ... }` declaration form, so match both that and the
+  # bare `name()` form. The window must be large enough to span the full
+  # main() body (~60 lines of arg parsing precede the preflight call).
+  # Pipe `run` to avoid losing the pipeline's exit status.
+  run bash -c 'grep -A 80 "^\(function \)\?main()" "$1" | grep -q "preflight_checks"' _ "${REPO_ROOT}/install.sh"
   [ "$status" -eq 0 ]
 }

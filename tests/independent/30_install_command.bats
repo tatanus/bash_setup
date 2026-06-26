@@ -6,53 +6,7 @@ load '../load.bash'
 
 setup() {
   setup_temp_home
-  # Create mock common_core for tests
-  mkdir -p "${HOME}/.config/bash/lib/common_core"
-
-  # Mock common_core util.sh with required functions
-  cat > "${HOME}/.config/bash/lib/common_core/util.sh" << 'EOF'
-#!/usr/bin/env bash
-info() { printf '[* INFO  ] %s\n' "$*"; }
-warn() { printf '[! WARN  ] %s\n' "$*" >&2; }
-fail() { printf '[- FAIL  ] %s\n' "$*" >&2; }
-pass() { printf '[+ PASS  ] %s\n' "$*"; }
-debug() { printf '[. DEBUG ] %s\n' "$*"; }
-
-cmd::exists() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-file::copy() {
-  local src="$1"
-  local dest="$2"
-
-  # Create backup if dest exists
-  if [[ -f "${dest}" ]]; then
-    cp "${dest}" "${dest}.old.$(date +%Y%m%d_%H%M%S)"
-  fi
-
-  cp "${src}" "${dest}"
-  pass "Copied: ${src} -> ${dest}"
-}
-
-file::restore_old_backup() {
-  local target="$1"
-  local backup
-
-  # Find most recent backup
-  backup=$(find "$(dirname "${target}")" -name "$(basename "${target}").old.*" 2>/dev/null | sort -r | head -n1)
-
-  if [[ -n "${backup}" && -f "${backup}" ]]; then
-    mv "${backup}" "${target}"
-    pass "Restored: ${target} from backup"
-    return 0
-  else
-    warn "No backup found for: ${target}"
-    return 1
-  fi
-}
-EOF
-  chmod +x "${HOME}/.config/bash/lib/common_core/util.sh"
+  create_mock_common_core
 }
 
 teardown() {
