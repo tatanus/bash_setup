@@ -178,12 +178,31 @@ done
 ###############################################################################
 # LOAD SECONDARY BASH CONFIG FILES
 ###############################################################################
+# Order matters: each line in this list is sourced top-to-bottom. Helpers
+# that other files depend on (bash.funcs.sh, bash.prompt_funcs.sh,
+# bash-preexec.sh) appear before their consumers. Each file has a
+# `*_LOADED` source guard so explicit ordering here does not double-load
+# files that are also sourced indirectly (bash.aliases.sh sources
+# bash.funcs.sh; bash.prompt.sh sources bash.prompt_funcs.sh and
+# bash-preexec.sh).
 secondary_bash_files=(
     # BASH visual elements
     "${BASH_DIR}/bash.visuals.sh"
 
+    # General-purpose helpers consumed by bash.aliases.sh
+    # (check_command, _get_os, history_search, etc.).
+    "${BASH_DIR}/bash.funcs.sh"
+
     # Useful BASH aliases
     "${BASH_DIR}/bash.aliases.sh"
+
+    # Prompt helper functions consumed by bash.prompt.sh.
+    "${BASH_DIR}/bash.prompt_funcs.sh"
+
+    # ZSH-like preexec/precmd hooks; bash.prompt.sh and combined.history.sh
+    # register callbacks into precmd_functions / preexec_functions arrays
+    # that this file declares.
+    "${BASH_DIR}/bash-preexec.sh"
 
     # Configure the BASH prompt
     "${BASH_DIR}/bash.prompt.sh"
