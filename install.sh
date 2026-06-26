@@ -29,22 +29,31 @@ IFS=$'\n\t'
 # Logging Fallbacks
 #===============================================================================
 if ! declare -F info > /dev/null 2>&1; then
-    function info()  { [[ "${QUIET}" == "true" ]] && return 0; printf '[INFO ] %s\n' "${*}" >&2; }
+    function info() {
+        [[ "${QUIET}" == "true" ]] && return 0
+        printf '[INFO ] %s\n' "${*}" >&2
+    }
 fi
 if ! declare -F warn > /dev/null 2>&1; then
-    function warn()  { printf '[WARN ] %s\n' "${*}" >&2; }
+    function warn() { printf '[WARN ] %s\n' "${*}" >&2; }
 fi
 if ! declare -F error > /dev/null 2>&1; then
     function error() { printf '[ERROR] %s\n' "${*}" >&2; }
 fi
 if ! declare -F debug > /dev/null 2>&1; then
-    function debug() { [[ "${QUIET}" == "true" ]] && return 0; printf '[DEBUG] %s\n' "${*}" >&2; }
+    function debug() {
+        [[ "${QUIET}" == "true" ]] && return 0
+        printf '[DEBUG] %s\n' "${*}" >&2
+    }
 fi
 if ! declare -F pass > /dev/null 2>&1; then
-    function pass()  { [[ "${QUIET}" == "true" ]] && return 0; printf '[PASS ] %s\n' "${*}" >&2; }
+    function pass() {
+        [[ "${QUIET}" == "true" ]] && return 0
+        printf '[PASS ] %s\n' "${*}" >&2
+    }
 fi
 if ! declare -F fail > /dev/null 2>&1; then
-    function fail()  { printf '[FAIL ] %s\n' "${*}" >&2; }
+    function fail() { printf '[FAIL ] %s\n' "${*}" >&2; }
 fi
 
 #===============================================================================
@@ -100,6 +109,8 @@ readonly -a BASH_DOT_FILES=(
     "combined.history.sh"
     "ssh.aliases.sh"
     "bash.visuals.sh"
+    "tgt.aliases.sh"
+    "capture_traffic.sh"
 )
 
 readonly -a REQUIRED_DIRECTORIES=(
@@ -214,10 +225,10 @@ function preflight_checks() {
     fi
 
     # Capability detection: SHA-256
-    if command -v sha256sum >/dev/null 2>&1; then
+    if command -v sha256sum > /dev/null 2>&1; then
         HAS_SHA256_TOOL="true"
         SHA256_TOOL="sha256sum"
-    elif command -v shasum >/dev/null 2>&1; then
+    elif command -v shasum > /dev/null 2>&1; then
         HAS_SHA256_TOOL="true"
         SHA256_TOOL="shasum"
     else
@@ -239,7 +250,7 @@ function preflight_checks() {
 ###############################################################################
 function load_common_core() {
     # Force clean bootstrap even if already sourced in this shell
-    unset COMMON_CORE_INITIALIZED 2>/dev/null || true
+    unset COMMON_CORE_INITIALIZED 2> /dev/null || true
 
     # shellcheck source=/dev/null
     if ! source "${COMMON_CORE_UTIL}"; then
@@ -257,7 +268,7 @@ function load_common_core() {
 
     local f
     for f in "${required_funcs[@]}"; do
-        if ! declare -F "${f}" >/dev/null 2>&1; then
+        if ! declare -F "${f}" > /dev/null 2>&1; then
             fail "common_core is missing required function: ${f}"
             return 1
         fi
@@ -342,11 +353,11 @@ function files_differ() {
     local src_sum="" dest_sum=""
 
     if [[ "${SHA256_TOOL}" == "sha256sum" ]]; then
-        src_sum="$(sha256sum "${src}" 2>/dev/null | cut -d' ' -f1)"
-        dest_sum="$(sha256sum "${dest}" 2>/dev/null | cut -d' ' -f1)"
+        src_sum="$(sha256sum "${src}" 2> /dev/null | cut -d' ' -f1)"
+        dest_sum="$(sha256sum "${dest}" 2> /dev/null | cut -d' ' -f1)"
     elif [[ "${SHA256_TOOL}" == "shasum" ]]; then
-        src_sum="$(shasum -a 256 "${src}" 2>/dev/null | cut -d' ' -f1)"
-        dest_sum="$(shasum -a 256 "${dest}" 2>/dev/null | cut -d' ' -f1)"
+        src_sum="$(shasum -a 256 "${src}" 2> /dev/null | cut -d' ' -f1)"
+        dest_sum="$(shasum -a 256 "${dest}" 2> /dev/null | cut -d' ' -f1)"
     else
         # Defensive fallback
         return 0
@@ -521,7 +532,7 @@ function setup_screenrc() {
     fi
 
     local version major src dest
-    version="$(screen --version 2>/dev/null | awk '{print $NF}')"
+    version="$(screen --version 2> /dev/null | awk '{print $NF}')"
     major="${version%%.*}"
     dest="${HOME}/.screenrc"
 
@@ -564,23 +575,23 @@ function main() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            install|update|uninstall)
+            install | update | uninstall)
                 command="$1"
                 shift
                 ;;
-            -h|--help)
+            -h | --help)
                 usage
                 return 0
                 ;;
-            -v|--version)
+            -v | --version)
                 echo "${SCRIPT_NAME} v${VERSION}"
                 return 0
                 ;;
-            -q|--quiet)
+            -q | --quiet)
                 QUIET="true"
                 shift
                 ;;
-            -f|--force)
+            -f | --force)
                 force="true"
                 shift
                 ;;
@@ -609,8 +620,8 @@ function main() {
     fi
 
     case "${command}" in
-        install)   cmd_install "${skip_tools}" ;;
-        update)    cmd_update ;;
+        install) cmd_install "${skip_tools}" ;;
+        update) cmd_update ;;
         uninstall) cmd_uninstall ;;
         *)
             fail "Unknown command: ${command}"

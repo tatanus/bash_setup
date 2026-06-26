@@ -64,7 +64,7 @@ function run_shfmt() {
     info "Checking formatting with shfmt..."
     # Use -prune to skip the excluded directory entirely
     if ! find . -type d -name "${EXCLUDE_DIR}" -prune -o -type f -name "*.sh" -print0 |
-        xargs -0 shfmt -d -i 4 -ci -bn -kp -sr -ln bash; then
+        xargs -0 shfmt -d -i 4 -ci -sr -ln bash; then
         error "shfmt reported formatting issues"
         STYLE_FAIL=1
     fi

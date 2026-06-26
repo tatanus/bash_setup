@@ -193,8 +193,14 @@ secondary_bash_files=(
     "${BASH_DIR}/tmux.aliases.sh"
     "${BASH_DIR}/ssh.aliases.sh"
 
-    # Custom combined history file 
+    # Custom combined history file
     "${BASH_DIR}/combined.history.sh"
+
+    # Kerberos ticket helpers (renewTGT / renewAllTGT)
+    "${BASH_DIR}/tgt.aliases.sh"
+
+    # Traffic capture helper
+    "${BASH_DIR}/capture_traffic.sh"
 
     # pentest environment if present
     "${BASH_DIR}/pentest.sh"

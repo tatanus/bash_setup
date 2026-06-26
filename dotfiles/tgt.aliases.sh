@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2154 # ENGAGEMENT_DIR is set by user's pen-testing environment
 # shellcheck disable=SC2034 # Variables defined for future use in pen-testing workflow
 set -uo pipefail
 IFS=$'\n\t'
@@ -19,6 +18,12 @@ IFS=$'\n\t'
 # Guard to prevent multiple sourcing
 if [[ -z "${TGT_ALIAS_SH_LOADED:-}" ]]; then
     declare -g TGT_ALIAS_SH_LOADED=true
+
+    # ENGAGEMENT_DIR is normally exported by pentest_setup's config.sh
+    # (downstream in the load order). When bash_setup is sourced on its own
+    # — or before pentest_setup runs — fall back to pentest_setup's DATA_DIR
+    # convention so this file does not crash under `set -u`.
+    : "${ENGAGEMENT_DIR:=${HOME}/DATA}"
 
     # Default directory for TGT files
     TGT_DIR="${ENGAGEMENT_DIR}/LOOT/CREDENTIALS/CCACHE"
