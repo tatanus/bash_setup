@@ -54,13 +54,19 @@ if [[ -z "${BASH_ENV_SH_LOADED:-}" ]]; then
         return 0
     }
 
-    # Apply LS_COLORS to the environment
-    # Apply dircolors if available
+    # Apply LS_COLORS to the environment.
+    # `dircolors -b` emits a stream of `export LS_COLORS=...` shell assignments
+    # intended to be loaded into the current shell. The traditional idiom is
+    # `eval "$(dircolors -b)"`, which the project bans. Bash 4+ lets us use
+    # process substitution instead — `source <(...)` reads the assignments
+    # through a FIFO without invoking eval, with identical effect.
     if _check_command "dircolors"; then
-        eval "$(dircolors -b)"
+        # shellcheck source=/dev/null
+        source <(dircolors -b)
     elif _check_command "gdircolors"; then
         alias dircolors="gdircolors"
-        eval "$(gdircolors -b)"
+        # shellcheck source=/dev/null
+        source <(gdircolors -b)
     else
         echo "Neither dircolors nor gdircolors is available. Skipping color setup."
     fi

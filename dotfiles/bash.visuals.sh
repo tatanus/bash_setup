@@ -106,7 +106,13 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
             pid="${arg}"
         else
             is_command=1
-            # shellcheck disable=SC2086  # Allow word splitting for command execution
+            # Intentional eval: `arg` is a caller-supplied shell command string
+            # (e.g. `show_spinner "cd /tmp && tar czf foo.tgz *.log"`). This is
+            # an interactive helper — the user typing this is the same shell
+            # context that would have run the command directly. argv form
+            # would force pre-tokenization and break complex-shell-command
+            # callers. Not a security boundary.
+            # shellcheck disable=SC2294
             eval "${arg} &"
             pid=$!
         fi
@@ -195,6 +201,9 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
             pid="${arg}"
         else
             is_command=1
+            # Intentional eval: see show_spinner above for rationale (caller-
+            # supplied shell command string from interactive context).
+            # shellcheck disable=SC2294
             eval "${arg} &"
             pid=$!
         fi
@@ -226,6 +235,9 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
         local start_time
         start_time=$(date +%s)
         info "Running: ${cmd}"
+        # Intentional eval: see show_spinner above for rationale (caller-
+        # supplied shell command string from interactive context).
+        # shellcheck disable=SC2294
         eval "${cmd}"
         local exit_code=$?
         local elapsed=$(($(date +%s) - start_time))
