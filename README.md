@@ -1,7 +1,7 @@
 # bash_setup
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://github.com/tatanus/bash_setup/actions/workflows/main.yml/badge.svg)](https://github.com/tatanus/bash_setup/actions/workflows/main.yml)
+[![Build Status](https://github.com/tatanus/bash_setup/actions/workflows/claude-gates.yml/badge.svg)](https://github.com/tatanus/bash_setup/actions/workflows/claude-gates.yml)
 [![Last Commit](https://img.shields.io/github/last-commit/tatanus/bash_setup)](https://github.com/tatanus/bash_setup/commits/main)
 
 ![Bash >=4.0](https://img.shields.io/badge/Bash-%3E%3D4.0-4EAA25?logo=gnu-bash&logoColor=white)
@@ -10,37 +10,56 @@
 
 ## Overview
 
-`bash_setup` is a small framework for setting up a consistent Bash environment across Linux and macOS. It:
+`bash_setup` ships a curated set of Bash dotfiles (bashrc, prompt, aliases,
+history, screen/tmux configs, helpers) along with an installer that deploys
+them to `${HOME}/.config/bash/` and wires them into the user's shell.
 
-- Creates/validates a standard directory layout under `$HOME`
-- Backs up and installs curated **dotfiles** (bashrc, inputrc, tmux.conf, etc.)
-- Exposes menu-driven **tasks** to install/undo the dotfiles and perform setup
-- Integrates **CI** (ShellCheck), **formatting** (shfmt), and basic **tests** (BATS)
+It is the second repo in a five-repo stack:
 
-## Submodules
-## Submodules
-<!-- SUBMODULES-LIST:START -->
+```
+common_core  →  bash_setup  →  scripts  →  pentest_setup  →  pentest_menu
+```
 
-* [lib/common_core](https://github.com/tatanus/common_core.git)
+`bash_setup` depends on **common_core** being installed first at
+`${HOME}/.config/bash/lib/common_core/util.sh`. The installer's preflight
+will refuse to run otherwise.
 
-<!-- SUBMODULES-LIST:END -->
+---
 
+## Requirements
 
+- **Bash 4+** (Linux ships with this by default; on macOS install via
+  `brew install bash`)
+- **common_core** installed at `${HOME}/.config/bash/lib/common_core/`
+  (see [common_core](https://github.com/tatanus/common_core))
+- Recommended for development:
+  - `shellcheck` (lint)
+  - `shfmt` (format) — must support `-i 4 -ci -sr`
+  - `bats` (test)
 
+macOS: `brew install shellcheck shfmt bats-core`
+Ubuntu/Debian: `sudo apt-get install shellcheck bats` (shfmt: install via
+`go install mvdan.cc/sh/v3/cmd/shfmt@latest` or the GitHub releases page).
 
+---
 
+## Quick Start
 
+```bash
+# 1. Install common_core first
+git clone https://github.com/tatanus/common_core.git
+cd common_core
+make install   # deploys to ${HOME}/.config/bash/lib/common_core/
+cd ..
 
+# 2. Clone and install bash_setup
+git clone https://github.com/tatanus/bash_setup.git
+cd bash_setup
+make install   # equivalent to: bash install.sh install
 
-### Intended Execution Flow
-
-1. **Entry point:** `./SetupBash.sh`
-2. **Configuration:** sources `config/config.sh` (paths, dirs, logging) and `config/lists.sh` (dotfile lists & menu items)
-3. **Core library:** sources `lib/common_core/lib/utils.sh` and `lib/common_core/lib/menu.sh` (logging, prompts, menu loop)
-4. **Tasks:** sources `menu/menu_tasks.sh` (e.g., `Setup_Dot_Files`, `Undo_Setup_Dot_Files`, `Setup_Bash_Directories`)
-5. **Dotfiles:** copies files from `./dotfiles/` into the right places, backing up any existing ones
-
-> **Note:** This repo expects a `lib/common_core` **submodule** that provides shared functions such as logging, error handling, prompts, and menu helpers.
+# 3. Start a new shell or source the deployed bashrc
+exec bash -l
+```
 
 ---
 
@@ -48,153 +67,178 @@
 
 ```
 .
-├── SetupBash.sh                # main entrypoint script
-├── config/
-│   ├── config.sh               # environment variables, dirs (DATA/, LOGS/, etc.)
-│   └── lists.sh                # arrays of dotfiles and menu items
-├── dotfiles/                   # bash/tmux/screen/vim/wget/curl configs & alias files
-├── lib/
-│   └── common_core/            # (git submodule) expected to contain lib/utils.sh, lib/menu.sh
-├── menu/
-│   └── menu_tasks.sh           # functions: Setup_Dot_Files, Undo_Setup_Dot_Files, Setup_Bash_Directories
-├── tests/
-│   └── ...                     # BATS sanity tests
-├── Makefile                    # helper targets (lint/format/test/install/run/etc.)
-└── README.md
+├── install.sh                  # install / update / uninstall flow
+├── Makefile                    # quality gates + release automation
+├── VERSION                     # date-based version: YYYY.MM.DD.N
+├── CHANGELOG.md                # Keep a Changelog (see Releases below)
+├── dotfiles/                   # files deployed to ${HOME}/.config/bash/
+│   ├── bashrc, profile, bash_profile
+│   ├── bash.path.sh            # PATH, GOPATH, macOS Homebrew adjustments
+│   ├── bash.env.sh             # locale, editor, history, dircolors
+│   ├── path.env.sh             # BASH_DIR, BASH_LOG_DIR
+│   ├── bash.funcs.sh           # check_command, _get_os, history_search
+│   ├── bash.aliases.sh         # ls / ll / grep / etc. wrappers
+│   ├── bash.prompt.sh          # PS1 builder
+│   ├── bash.prompt_funcs.sh    # prompt helper functions
+│   ├── bash.visuals.sh         # colored helpers, spinners
+│   ├── bash-preexec.sh         # preexec / precmd hooks
+│   ├── combined.history.sh     # cross-shell history merge
+│   ├── screen.aliases.sh       # screen wrappers
+│   ├── tmux.aliases.sh         # tmux wrappers
+│   ├── ssh.aliases.sh          # ssh wrappers
+│   ├── tgt.aliases.sh          # Kerberos TGT helpers (getTGT/renewTGT/…)
+│   ├── capture_traffic.sh      # tcpdump capture wrapper
+│   ├── tmux.conf, screenrc_v4, screenrc_v5
+│   ├── inputrc, vimrc, curlrc, wgetrc
+├── tests/                      # BATS coverage
+│   ├── 00_bootstrap.bats
+│   ├── 10_install_help.bats
+│   ├── 20_preflight.bats
+│   ├── independent/            # update-mode + validation tests
+│   └── helpers/
+├── tools/
+│   └── check_bash_style.sh     # comprehensive style scan
+└── docs/                       # CHANGELOG, ROADMAP, design notes
 ```
 
+### What `install.sh` deploys
+
+`install.sh` copies two groups of files from `dotfiles/`:
+
+- **COMMON_DOT_FILES** → `${HOME}/` directly: `bashrc`, `profile`,
+  `bash_profile`, `tmux.conf`, `screenrc_v4`, `screenrc_v5`, `inputrc`,
+  `vimrc`, `wgetrc`, `curlrc`.
+- **BASH_DOT_FILES** → `${HOME}/.config/bash/`: the `bash.*.sh` helpers,
+  `*.aliases.sh`, `combined.history.sh`, `bash-preexec.sh`,
+  `tgt.aliases.sh`, `capture_traffic.sh`.
+
+The deployed `bashrc` sources `bash.path.sh`, `bash.env.sh`, and
+`path.env.sh` first (they set `BASH_DIR` and `PATH`), then walks
+`secondary_bash_files=(…)` to source the rest, with a final optional
+`${BASH_DIR}/pentest.sh` hook for the downstream `pentest_setup` repo.
+
 ---
 
-## Requirements
+## Make targets
 
-- **Bash** ≥ 4.0 (Linux default; on macOS you may need to install via Homebrew)
-- **git** (for submodules)
-- Recommended for development:
-  - **ShellCheck** (lint)
-  - **shfmt** (format)
-  - **BATS** (tests)
+| Target              | What it does                                                        |
+|---------------------|---------------------------------------------------------------------|
+| `make help`         | Show all targets.                                                   |
+| `make ci`           | Format check + lint + tests. **Non-mutating. Run before PRs.**      |
+| `make fmt`          | Auto-format with `shfmt -i 4 -ci -sr` (writes in place).            |
+| `make fmt-check`    | Verify formatting without writing; same flags as `make fmt`.        |
+| `make lint`         | `shellcheck -x` across `git ls-files '*.sh'`.                       |
+| `make test`         | `bats -r tests`.                                                    |
+| `make style`        | Comprehensive style scan via `tools/check_bash_style.sh`.           |
+| `make install`      | `bash install.sh install` — deploy dotfiles.                        |
+| `make update`       | `bash install.sh update` — refresh only changed dotfiles.           |
+| `make uninstall`    | `bash install.sh uninstall` — restore backups.                      |
+| `make show-version` | Print current `VERSION`.                                            |
+| `make release V=…`  | Cut a release (see [Releases](#releases)).                          |
+| `make release-today`| Cut a release using today's UTC date (`YYYY.MM.DD.0`).              |
 
-macOS users can install these via Homebrew; Linux users via apt/yum/pacman as appropriate.
+The mandated formatter flags are **`-i 4 -ci -sr`**. Do not add `-bn` or
+`-kp` anywhere — they conflict with the project formatting.
 
 ---
 
-## Quick Start
+## Style conventions
+
+Enforced by `.shellcheckrc` and `tools/check_bash_style.sh`:
+
+- Bash 4+, `set -uo pipefail`, `IFS=$'\n\t'`.
+- **No `set -e`** — handle errors explicitly.
+- **No `eval`** outside heavily-audited metaprogramming.
+- `function name() { … }` form; never bare `name() { … }`.
+- All expansions quoted and braced (`"${var}"`, `"$@"`).
+- `[[ … ]]` not `[ … ]`; `command -v` not `which`; `$(…)` not backticks.
+- Source-guard idiom on every helper:
+  ```bash
+  if [[ -z "${X_LOADED:-}" ]]; then
+      declare -g X_LOADED=true
+      # …
+  fi
+  ```
+
+See `CLAUDE.md` (auto-generated) for the canonical policy hash chain.
+
+---
+
+## Cross-repo contract
+
+bash_setup ships a `bashrc` that *optionally* sources
+`${BASH_DIR}/pentest.sh` if present. That file is **not** deployed by
+bash_setup; it is deployed by the downstream `pentest_setup` repo as its
+hook into the user shell. The guard (`[[ -f "${file}" ]]`) keeps the load
+silent when pentest_setup is not installed.
+
+A few helpers reference `ENGAGEMENT_DIR` (e.g. `tgt.aliases.sh`). That
+variable is normally exported by pentest_setup's `config.sh`; bash_setup
+falls back to `${HOME}/DATA` (matching pentest_setup's `DATA_DIR`
+convention) so the helper does not crash under `set -u` when sourced
+standalone.
+
+---
+
+## Releases
+
+The repo uses date-based four-part versioning (`YYYY.MM.DD.N`), tracked in
+`VERSION` and `CHANGELOG.md`. To cut a release:
 
 ```bash
-# 1) Clone the repo
-git clone https://github.com/tatanus/bash_setup.git
-cd bash_setup
+# 1. Land your changes as normal commits with `## [Unreleased]` notes.
+git add …; git commit -m "feat(…): …"; git push
 
-# 2) Fetch the core submodule(s)
-git submodule update --init --recursive
-
-# 3) (Dev) Install tools (examples)
-#   macOS: brew install shellcheck shfmt bats-core
-#   Ubuntu: sudo apt-get update && sudo apt-get install -y shellcheck shfmt bats
-
-# 4) Run lint/format/tests (optional, recommended)
-make lint
-make fmt
-make test
-
-# 5) Run the setup
-./SetupBash.sh
-```
-
----
-
-## What gets installed?
-
-From `config/lists.sh`, the default dotfiles include (not exhaustive):
-
-- `dotfiles/bashrc`, `dotfiles/bash_profile`, `dotfiles/profile`
-- `dotfiles/inputrc`
-- `dotfiles/tmux.conf` and `tmux.aliases.sh`
-- `dotfiles/screenrc_v4`, `screenrc_v5`, `screen.aliases.sh`
-- `dotfiles/vimrc`
-- `dotfiles/curlrc`, `dotfiles/wgetrc`
-- Various `*.aliases.sh`, `bash.*.sh` helpers (env, funcs, path, prompt, visuals, ssh, tgt, etc.)
-
-You can tailor the installation list by editing **`config/lists.sh`** arrays.
-
----
-
-## Tasks / Menu
-
-From `menu/menu_tasks.sh`:
-
-- `Setup_Dot_Files` — Back up existing user dotfiles and replace with repo versions
-- `Undo_Setup_Dot_Files` — Restore backups and remove installed dotfiles
-- `Setup_Bash_Directories` — Create expected directories (e.g., `${HOME}/DATA`, `${HOME}/DATA/LOGS`)
-
-These are typically surfaced through a menu (provided by `lib/common_core/lib/menu.sh`) that the entrypoint script calls.
-
----
-
-## Configuration
-
-`config/config.sh`:
-
-- Establishes `${HOME}` assumptions & derived dirs:
-  - `${DATA_DIR}="${HOME}/DATA"`
-  - `${LOGS_DIR}="${DATA_DIR}/LOGS"`
-  - `${BASH_DIR}` / `${BASH_LOG_FILE}` and other script-internal paths
-- Central place to enable/disable logging to file, tweak defaults, etc.
-
-`config/lists.sh`:
-
-- The lists of **dotfiles** to install
-- The list of **menu items** to expose
-
----
-
-## Development
-
-Common commands:
-
-```bash
-# lint bash files with ShellCheck
-make lint
-
-# format with shfmt
-make fmt
-
-# run tests (BATS)
-make test
+# 2. Cut the release. `make release` will:
+#    - run `make ci` (refuse if anything fails)
+#    - refuse on a dirty working tree
+#    - stamp `## [Unreleased]` -> `## [Vx] - YYYY-MM-DD` (UTC) in CHANGELOG
+#    - write VERSION
+#    - single commit `chore(release): cut Vx`
+#    - annotated tag `vVx`
+#    - `git push --follow-tags`
+make release-today          # uses today's UTC date.0
+make release-today N=1      # second cut of the same UTC day -> .1
+make release V=2026.06.25.0 # explicit version
 ```
 
 ---
 
 ## Troubleshooting
 
-- **Missing functions like `info/pass/warn/fail`**  
-  → These come from `lib/common_core/lib/utils.sh`. Confirm the submodule is present and sourced.
+**`install.sh` aborts with "common_core library not found"**
+→ Install [common_core](https://github.com/tatanus/common_core) first.
+   The installer expects `${HOME}/.config/bash/lib/common_core/util.sh`.
 
-- **macOS `getent` not found**  
-  → The entrypoint has a fallback for resolving `$HOME`, but prefer cross-platform checks. Verify `whoami`, `$HOME`, and `dscl`/`id` as needed.
+**`bash.aliases.sh` complains about missing `check_command`**
+→ `bash.aliases.sh` sources `bash.funcs.sh` on load. If `bash.funcs.sh`
+   was not deployed, re-run `make install` and verify it landed in
+   `${HOME}/.config/bash/`.
 
-- **Dotfiles not installed**  
-  → Check `config/lists.sh` is sourced and arrays are populated; run `Setup_Bash_Directories` first; verify write permissions in `$HOME`.
+**`tgt.aliases.sh` fails with `ENGAGEMENT_DIR: unbound variable`**
+→ Should not happen on current `main`; if it does, you are on a version
+   prior to the safe-default fix. Update or set `ENGAGEMENT_DIR=…`
+   manually.
+
+**`make style` reports drift on files that look correct**
+→ Check `tools/check_bash_style.sh` is invoking `shfmt -i 4 -ci -sr`
+   (not `-bn -kp`). The wrong flags produce false positives.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) if present;
+otherwise, the contract is:
 
-1. Fork this repository.
-2. Create a branch for your feature or fix.
-3. Commit your changes and push to your fork.
-4. Submit a pull request.
+1. Branch from `main`.
+2. Run `make ci` locally — it must be green before opening a PR.
+3. If your change is user-visible, add a bullet under `## [Unreleased]`
+   in `CHANGELOG.md`.
+4. Open a PR against `main`.
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-## Notes
-
-For any questions, feature requests, or bug reports, feel free to open an issue or contact the repository owner.
