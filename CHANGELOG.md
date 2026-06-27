@@ -5,6 +5,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `dotfiles/tgt.aliases.sh` and `dotfiles/capture_traffic.sh` were
+  moved to `pentest_setup` ownership. Both are pure pen-test helpers
+  (Kerberos TGT lifecycle and tshark-based traffic capture) that had
+  ended up here for historical reasons. The placement caused a
+  layering inversion CLAUDE.md flagged: `tgt.aliases.sh` referenced
+  `ENGAGEMENT_DIR`, a variable that only `pentest_setup` defines, so
+  `bash_setup` was depending on a downstream repo's exports. The
+  previous workaround was an in-file `${HOME}/DATA` fallback default
+  for `ENGAGEMENT_DIR`; that workaround is no longer needed because
+  `pentest_setup`'s `pentest.path.sh` exports the variable
+  unconditionally before either file is sourced.
+- Both entries removed from `install.sh`'s `BASH_DOT_FILES` deploy
+  array; both entries removed from `dotfiles/bashrc`'s
+  `secondary_bash_files` source list. The `${BASH_DIR}/pentest.sh`
+  hook (still optional, still deployed by `pentest_setup`) now sources
+  these files in addition to the rest of the pentest dotfiles.
+- README updated: file inventory, "What install.sh deploys" section,
+  cross-repo contract section (the ENGAGEMENT_DIR safe-default note
+  is gone), and the related troubleshooting entry all removed.
+
+### Changed
+
+- `tests/independent/85_bashrc_integration.bats`: dropped the
+  `renewTGT (from tgt.aliases.sh) is defined` assertion -- the file
+  is no longer here.
+- `tests/independent/80_e2e_lifecycle.bats`: removed
+  `tgt.aliases.sh` / `capture_traffic.sh` from the
+  "install deploys the full BASH_DIR inventory" assertion list.
+- `tests/independent/90_dotfile_syntax.bats`: dropped the
+  source-guard carve-out for `capture_traffic.sh` (no longer here).
+- Test suite is now 84 tests (was 85).
+
 ## [2026.06.27.2] - 2026-06-27
 
 ### Removed
