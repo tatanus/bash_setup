@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.06.27.0] - 2026-06-27
+
 ### Added
 
 - `tgt.aliases.sh` and `capture_traffic.sh` added to `install.sh`'s
