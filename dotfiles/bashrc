@@ -215,13 +215,10 @@ secondary_bash_files=(
     # Custom combined history file
     "${BASH_DIR}/combined.history.sh"
 
-    # Kerberos ticket helpers (renewTGT / renewAllTGT)
-    "${BASH_DIR}/tgt.aliases.sh"
-
-    # Traffic capture helper
-    "${BASH_DIR}/capture_traffic.sh"
-
-    # pentest environment if present
+    # pentest environment if present. Sources tgt.aliases.sh,
+    # capture_traffic.sh, screenshot.sh, and the rest of the
+    # pentest-specific dotfiles (deployed by pentest_setup, not
+    # bash_setup -- this hook is just the entry point).
     "${BASH_DIR}/pentest.sh"
 )
 

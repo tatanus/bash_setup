@@ -86,8 +86,6 @@ exec bash -l
 │   ├── screen.aliases.sh       # screen wrappers
 │   ├── tmux.aliases.sh         # tmux wrappers
 │   ├── ssh.aliases.sh          # ssh wrappers
-│   ├── tgt.aliases.sh          # Kerberos TGT helpers (getTGT/renewTGT/…)
-│   ├── capture_traffic.sh      # tcpdump capture wrapper
 │   ├── tmux.conf, screenrc_v4, screenrc_v5
 │   ├── inputrc, vimrc, curlrc, wgetrc
 ├── tests/                      # BATS coverage
@@ -109,13 +107,16 @@ exec bash -l
   `bash_profile`, `tmux.conf`, `screenrc_v4`, `screenrc_v5`, `inputrc`,
   `vimrc`, `wgetrc`, `curlrc`.
 - **BASH_DOT_FILES** → `${HOME}/.config/bash/`: the `bash.*.sh` helpers,
-  `*.aliases.sh`, `combined.history.sh`, `bash-preexec.sh`,
-  `tgt.aliases.sh`, `capture_traffic.sh`.
+  `*.aliases.sh`, `combined.history.sh`, `bash-preexec.sh`.
 
 The deployed `bashrc` sources `bash.path.sh`, `bash.env.sh`, and
 `path.env.sh` first (they set `BASH_DIR` and `PATH`), then walks
 `secondary_bash_files=(…)` to source the rest, with a final optional
 `${BASH_DIR}/pentest.sh` hook for the downstream `pentest_setup` repo.
+Pentest-specific helpers — Kerberos TGT helpers (`tgt.aliases.sh`),
+the traffic-capture wrapper (`capture_traffic.sh`), and the screenshot
+helper (`screenshot.sh`) — are deployed by `pentest_setup` and reach
+the shell through that hook.
 
 ---
 
@@ -172,11 +173,12 @@ bash_setup; it is deployed by the downstream `pentest_setup` repo as its
 hook into the user shell. The guard (`[[ -f "${file}" ]]`) keeps the load
 silent when pentest_setup is not installed.
 
-A few helpers reference `ENGAGEMENT_DIR` (e.g. `tgt.aliases.sh`). That
-variable is normally exported by pentest_setup's `config.sh`; bash_setup
-falls back to `${HOME}/DATA` (matching pentest_setup's `DATA_DIR`
-convention) so the helper does not crash under `set -u` when sourced
-standalone.
+There used to be a special note here about bash_setup's `tgt.aliases.sh`
+needing to fall back to a `${HOME}/DATA` default when sourced before
+`pentest_setup` exported `ENGAGEMENT_DIR`. That layering inversion is
+now gone: `tgt.aliases.sh` (and the matching `capture_traffic.sh`)
+have moved to `pentest_setup` ownership, where `ENGAGEMENT_DIR` is set
+unconditionally by `pentest.path.sh` before either file is sourced.
 
 ---
 
@@ -214,11 +216,6 @@ make release V=2026.06.25.0 # explicit version
 → `bash.aliases.sh` sources `bash.funcs.sh` on load. If `bash.funcs.sh`
    was not deployed, re-run `make install` and verify it landed in
    `${HOME}/.config/bash/`.
-
-**`tgt.aliases.sh` fails with `ENGAGEMENT_DIR: unbound variable`**
-→ Should not happen on current `main`; if it does, you are on a version
-   prior to the safe-default fix. Update or set `ENGAGEMENT_DIR=…`
-   manually.
 
 **`make style` reports drift on files that look correct**
 → Check `tools/check_bash_style.sh` is invoking `shfmt -i 4 -ci -sr`

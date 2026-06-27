@@ -69,11 +69,9 @@ source_bashrc_then() {
   [[ "${output}" =~ "declare -a preexec_functions" ]]
 }
 
-@test "integration: renewTGT (from tgt.aliases.sh) is defined" {
-  run source_bashrc_then 'declare -F renewTGT >/dev/null && echo ok'
-  [ "$status" -eq 0 ]
-  [[ "${output}" =~ "ok" ]]
-}
+# Removed: "renewTGT (from tgt.aliases.sh) is defined". tgt.aliases.sh
+# moved to pentest_setup ownership; bash_setup no longer ships or sources
+# it. The equivalent assertion belongs in pentest_setup's test suite.
 
 @test "integration: every file referenced in secondary_bash_files is present on disk" {
   # Extract the list of "${BASH_DIR}/x" entries from the deployed bashrc and

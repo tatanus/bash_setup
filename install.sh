@@ -109,8 +109,6 @@ readonly -a BASH_DOT_FILES=(
     "combined.history.sh"
     "ssh.aliases.sh"
     "bash.visuals.sh"
-    "tgt.aliases.sh"
-    "capture_traffic.sh"
 )
 
 readonly -a REQUIRED_DIRECTORIES=(

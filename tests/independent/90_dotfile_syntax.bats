@@ -45,10 +45,6 @@ load '../load.bash'
   local -a unguarded=()
   for f in "${REPO_ROOT}/dotfiles"/*.sh; do
     base=$(basename "${f}")
-    # Skip standalone scripts that aren't intended to be re-sourced.
-    case "${base}" in
-      capture_traffic.sh) continue ;;
-    esac
     if ! grep -qE "_LOADED:-|bash_preexec_imported" "${f}"; then
       unguarded+=("${base}")
     fi

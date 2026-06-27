@@ -72,11 +72,12 @@ teardown() {
     [ -f "${HOME}/.${f}" ]
   done
 
-  # BASH_DOT_FILES go to ${HOME}/.config/bash/ verbatim.
+  # BASH_DOT_FILES go to ${HOME}/.config/bash/ verbatim. tgt.aliases.sh
+  # and capture_traffic.sh used to live here but moved to pentest_setup
+  # ownership; they are no longer deployed by bash_setup.
   for f in bash.path.sh bash.env.sh path.env.sh bash.funcs.sh \
            bash.aliases.sh bash.prompt.sh bash.prompt_funcs.sh \
-           bash-preexec.sh bash.visuals.sh combined.history.sh \
-           tgt.aliases.sh capture_traffic.sh; do
+           bash-preexec.sh bash.visuals.sh combined.history.sh; do
     [ -f "${HOME}/.config/bash/${f}" ]
   done
 }
