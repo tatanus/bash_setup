@@ -5,6 +5,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `.github/workflows/claude-gates.yml`: rewrote with proper 2-space
+  indentation. The whole file was using single-space indents which
+  collapsed YAML's nesting: `branches: [main]` was a sibling of
+  `push:` instead of nested inside it, so GitHub parsed `branches:`
+  as an unknown top-level `on:` trigger and rejected the file with
+  a YAML error pointing at `jobs:`. No change to the gate logic
+  itself — same triggers, same 7 steps, same `.claude/tools/`
+  invocations. One drive-by improvement: artifact upload step now
+  has `if: always()` so failed runs still surface their diagnostic
+  JSON.
+
 ## [2026.06.27.0] - 2026-06-27
 
 ### Added
