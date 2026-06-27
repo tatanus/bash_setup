@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.06.27.2] - 2026-06-27
+
 ### Removed
 
 - `.github/workflows/claude-gates.yml`. The workflow invoked
