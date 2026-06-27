@@ -2,7 +2,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/tatanus/bash_setup/actions/workflows/main.yml/badge.svg)](https://github.com/tatanus/bash_setup/actions/workflows/main.yml)
-[![Claude Policy Gates](https://github.com/tatanus/bash_setup/actions/workflows/claude-gates.yml/badge.svg)](https://github.com/tatanus/bash_setup/actions/workflows/claude-gates.yml)
 [![Last Commit](https://img.shields.io/github/last-commit/tatanus/bash_setup)](https://github.com/tatanus/bash_setup/commits/main)
 
 ![Bash >=4.0](https://img.shields.io/badge/Bash-%3E%3D4.0-4EAA25?logo=gnu-bash&logoColor=white)

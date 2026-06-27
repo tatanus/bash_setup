@@ -5,6 +5,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `.github/workflows/claude-gates.yml`. The workflow invoked
+  `./.claude/tools/verify_bundle.sh` and `./.claude/tools/run_project_pipeline.sh`,
+  but `.gitignore` excludes the entire `.claude/` directory from the
+  repo. The toolchain has never been pushed, so GitHub's runner could
+  not execute the steps and the workflow failed at the first script
+  call (`No such file or directory`, exit 4).
+- The "Claude Policy Gates" badge in `README.md`, which pointed at
+  that now-removed workflow.
+
+The standard CI gates (`make lint`, `make fmt-check`, `make test`)
+continue to run on every push and PR via `.github/workflows/main.yml`,
+which was added in `2026.06.27.0`. The `.claude/` toolchain is still
+available locally for any contributor who has it deployed; it is
+simply no longer wired to CI.
+
 ## [2026.06.27.1] - 2026-06-27
 
 ### Fixed
