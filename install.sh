@@ -22,6 +22,7 @@ IFS=$'\n\t'
 # Globals
 #===============================================================================
 : "${QUIET:=false}"
+: "${DRY_RUN:=false}"
 : "${PASS:=0}"
 : "${FAIL:=1}"
 
@@ -157,6 +158,8 @@ OPTIONS:
     -v, --version   Show version
     -q, --quiet     Suppress non-error output
     -f, --force     Force overwrite without backup comparison
+    -n, --dry-run   Preview install/update/uninstall actions without
+                    making any changes on disk
     --skip-tools    Skip recommended tool checks during install
 
 EXAMPLES:
@@ -593,6 +596,10 @@ function main() {
                 force="true"
                 shift
                 ;;
+            -n | --dry-run)
+                DRY_RUN="true"
+                shift
+                ;;
             --skip-tools)
                 skip_tools="true"
                 shift
@@ -615,6 +622,34 @@ function main() {
     # standardize that via an env var or wrapper. This script does not assume it.
     if [[ "${force}" == "true" ]]; then
         warn "--force was requested. If common_core honors a force mode via env/flags, ensure it is enabled there."
+    fi
+
+    # --dry-run short-circuits the actual command. Each cmd_* function below
+    # would create / overwrite / restore files on disk; under dry-run we just
+    # report which command was selected (and any options) and exit cleanly.
+    # Preflight + common_core load already ran, so the user has confirmation
+    # that the environment is set up correctly.
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        info "[DRY-RUN] selected command: ${command}"
+        case "${command}" in
+            install)
+                info "[DRY-RUN] would deploy ${#BASH_DOT_FILES[@]} dotfile(s) to ${BASH_DIR}/"
+                info "[DRY-RUN] would deploy ${#COMMON_DOT_FILES[@]} common dotfile(s) to ${HOME}/"
+                info "[DRY-RUN] would create ${#REQUIRED_DIRECTORIES[@]} required director(y/ies)"
+                [[ "${skip_tools}" == "false" ]] && info "[DRY-RUN] would check ${#RECOMMENDED_TOOLS[@]} recommended tool(s)"
+                ;;
+            update)
+                info "[DRY-RUN] would compare checksums and re-copy any changed dotfile(s)"
+                ;;
+            uninstall)
+                info "[DRY-RUN] would restore the most recent .old backup of each managed dotfile"
+                ;;
+            *)
+                info "[DRY-RUN] unknown command: ${command}"
+                ;;
+        esac
+        pass "Dry run complete (no changes made)"
+        return 0
     fi
 
     case "${command}" in

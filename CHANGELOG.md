@@ -5,6 +5,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `install.sh` flag `-n, --dry-run`. Previews install / update /
+  uninstall actions (which dotfile arrays would be deployed, how many
+  files / directories / recommended-tool checks would happen) and
+  exits before any mutation. Brings bash_setup in line with
+  `pentest_setup` and `scripts`, which already had `--dry-run`, and
+  with `common_core` which gained it in the same review pass.
+- Universal-flag block in `--help` updated to document the new flag.
+
+### Changed
+
+- `tools/check_bash_style.sh` synced from `scripts`' canonical version.
+  Adds a filter that skips backslash-escaped backticks (`\\\``) when
+  searching for command-substitution backticks, so heredocs that emit
+  Markdown READMEs no longer false-positive. All four repos in the
+  stack now share a byte-identical `tools/check_bash_style.sh`.
+- `.github/CONTRIBUTING.md` replaced with the canonical version from
+  `common_core/.github/CONTRIBUTING.md` (with `common_core` → `bash_setup`
+  substitution). The previous file was the older template that still
+  used the banned `-bn -kp` shfmt flags, recommended the banned
+  `set -euo pipefail`, and left a `<your-username>/BASH` placeholder
+  in the clone URL.
+- `Makefile`'s `test` recipe now uses `find tests -name '*.bats'`
+  instead of `ls tests/*.bats`. The old form silently missed tests
+  under `tests/independent/` (and any other subdirectory) when no
+  `.bats` files existed at the top level. Behavioral fix only; current
+  tests pass in both forms because there were always top-level
+  `.bats` files too.
+
+### Removed
+
+- `docs/ROADMAP.md`. It was a 3-line stub ("near-term goals may
+  change based on feedback") with no content. The CHANGELOG is the
+  canonical history for this repo.
+
 ## [2026.06.27.3] - 2026-06-27
 
 ### Removed

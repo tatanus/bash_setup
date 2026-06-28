@@ -33,7 +33,7 @@ lint: ## Lint with shellcheck
 
 test: ## Run bats tests
 	@if [ -z "$(BATS)" ]; then echo "bats not installed"; exit 1; fi
-	@if ls tests/*.bats >/dev/null 2>&1; then bats -r tests; else echo "No tests/ found; ok."; fi
+	@if find tests -name '*.bats' -print -quit 2>/dev/null | grep -q .; then bats -r tests; else echo "No tests/ found; ok."; fi
 
 style: ## Run comprehensive style checks
 	@bash tools/check_bash_style.sh

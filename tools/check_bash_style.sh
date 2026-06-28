@@ -98,9 +98,15 @@ function run_custom_checks() {
         STYLE_FAIL=1
     fi
 
-    # Ban backticks
+    # Ban backticks. Intent of the rule is "no command-substitution backticks
+    # (use $(...) instead)". A backslash-escaped backtick (`\\\``) inside a
+    # heredoc is a literal character bound for the heredoc output (typically
+    # markdown formatting in a generated README), not command substitution.
+    # Filter those out before flagging.
     if grep -rn --exclude-dir="${EXCLUDE_DIR}" --include="*.sh" '`' . |
-        awk "${awk_filter}" | grep -v "check_bash_style.sh"; then
+        awk "${awk_filter}" |
+        grep -v 'check_bash_style.sh' |
+        grep -vE '\\`'; then
         error "Found disallowed backticks (use \$(...) instead)"
         STYLE_FAIL=1
     fi
