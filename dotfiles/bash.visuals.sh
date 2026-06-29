@@ -45,25 +45,34 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
     # -----------------------------------------------------------------------------
     # Logging helpers – expected to be sourced from bash.aliases.sh or define here
     # -----------------------------------------------------------------------------
+    # Each logger pins `local IFS=' '` so "$*" renders space-separated even
+    # when the surrounding shell has the project-mandated IFS=$'\n\t' set.
+    # Without this, a call like `debug "cmd: ${cmd[*]}"` would print each
+    # arg on its own line. The local IFS does not affect callers.
+
     function fail() {
+        local IFS=' '
         local timestamp
         timestamp=$(date +"[%Y-%m-%d %H:%M:%S]")
         printf "%s ${light_red}[- FAIL  ]${reset} %s\n" "${timestamp}" "$*" >&2
     }
 
     function pass() {
+        local IFS=' '
         local timestamp
         timestamp=$(date +"[%Y-%m-%d %H:%M:%S]")
         printf "%s ${light_green}[+ PASS  ]${reset} %s\n" "${timestamp}" "$*"
     }
 
     function info() {
+        local IFS=' '
         local timestamp
         timestamp=$(date +"[%Y-%m-%d %H:%M:%S]")
         printf "%s ${blue}[* INFO  ]${reset} %s\n" "${timestamp}" "$*"
     }
 
     function warn() {
+        local IFS=' '
         local timestamp
         timestamp=$(date +"[%Y-%m-%d %H:%M:%S]")
         printf "%s ${yellow}[! WARN  ]${reset} %s\n" "${timestamp}" "$*"
@@ -79,6 +88,7 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
             1 | true | TRUE | yes | YES | on | ON) ;;
             *) return 0 ;;
         esac
+        local IFS=' '
         local timestamp
         timestamp=$(date +"[%Y-%m-%d %H:%M:%S]")
         printf "%s ${orange}[# DEBUG ]${reset} %s\n" "${timestamp}" "$*"

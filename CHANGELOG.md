@@ -5,6 +5,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `dotfiles/bash.visuals.sh`: the `info` / `pass` / `warn` / `debug`
+  / `fail` color loggers no longer split multi-arg log messages
+  onto separate lines. Under the project-mandated `IFS=$'\n\t'`,
+  `"$*"` joins args using the first character of IFS, so calls
+  like `info "Running: ${cmd[*]}"` were rendering each token on
+  its own line. Added `local IFS=' '` to each function so the
+  join uses a space. Matches the same fix landed in common_core
+  v2026.06.29.6 for the fallback log functions.
+
+
 ## [2026.06.29.3] - 2026-06-29
 
 ### Removed
