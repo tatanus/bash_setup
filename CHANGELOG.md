@@ -5,6 +5,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `setup_screenrc` in `install.sh` mis-parsed the screen version
+  string. It ran `screen --version | awk '{print $NF}'`, but on
+  Ubuntu (screen 4.09.01) the version line is
+  `Screen version 4.09.01 (GNU) 20-Aug-23`, so `$NF` returned the
+  build date (`20-Aug-23`) instead of `4.09.01`. The case statement
+  then hit the `*) warn …; return 0` arm and `~/.screenrc` was
+  silently skipped on every Ubuntu install. Replaced the awk with
+  a regex-based extraction:
+  `grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1`. The major
+  version now resolves correctly (`4` or `5`) on every screen
+  release I tested.
+- `setup_screenrc` previously called `fail` + `return 1` when the
+  expected `~/.screenrc_v{4,5}` source file was missing, which
+  aborted the whole install. Changed to `warn` + `return 0` to
+  match the surrounding code's "warn but continue" pattern. This
+  also matches what the previously-passing
+  `tests/independent/30_install_command.bats:18` test expected --
+  that test was only passing because the version parser was
+  already broken and the case statement never reached this branch.
+
 ## [2026.06.28.0] - 2026-06-28
 
 ### Added

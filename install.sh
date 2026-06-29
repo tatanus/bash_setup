@@ -533,7 +533,10 @@ function setup_screenrc() {
     fi
 
     local version major src dest
-    version="$(screen --version 2> /dev/null | awk '{print $NF}')"
+    # `screen --version` prints e.g. "Screen version 4.09.01 (GNU) 20-Aug-23".
+    # Extract the first dotted-version token so we don't pick up the build
+    # date (which is what was happening when this used `awk '{print $NF}'`).
+    version="$(screen --version 2> /dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)"
     major="${version%%.*}"
     dest="${HOME}/.screenrc"
 
@@ -551,8 +554,8 @@ function setup_screenrc() {
     esac
 
     if [[ ! -f "${src}" ]]; then
-        fail "Expected screen config not found: ${src}"
-        return 1
+        warn "Expected screen config not found: ${src}; skipping ~/.screenrc setup."
+        return 0
     fi
 
     info "Installing screen config for screen ${version} -> ${dest}"
