@@ -5,6 +5,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `dotfiles/bash.env.sh:90` no longer unconditionally exports
+  `PROXY="proxychains4 -q "` on every interactive shell. That
+  contamination forced PROXY into the env of every child process
+  (the installers, apt::, ruby::, etc.), and common_core's
+  `net::proxy_auto_detect` honors an explicitly-set PROXY without
+  probing -- so even hosts with perfectly fine direct Internet were
+  being routed through proxychains. Combined with the
+  word-splitting bug fixed in common_core v2026.06.29.7, this
+  produced a cascading `proxychains4 -q : command not found` on
+  every apt operation in `pentest_setup/install.sh`. Changed to
+  `export PROXY="${PROXY:-}"` -- empty by default, with the
+  auto-detector (or the user's own profile) deciding the right
+  value. Header comment documents why "proxychains4 -q" must NOT
+  be the default here.
+
+
 ## [2026.06.29.4] - 2026-06-29
 
 ### Fixed

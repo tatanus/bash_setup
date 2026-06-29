@@ -86,9 +86,18 @@ if [[ -z "${BASH_ENV_SH_LOADED:-}" ]]; then
     export BAT_PAGER="less -R"
     export BAT_THEME="ansi"
 
-    # Enable proxychains4 for certain commands (true/false)
-    export PROXY="proxychains4 -q "
+    # PROXY is a dynamic command-prefix used by the installers / tool
+    # scripts in this stack. Do NOT hard-code "proxychains4 -q " here:
+    # exporting that unconditionally forces every child process (apt::,
+    # ruby::, the installers) to route through proxychains even on hosts
+    # with direct Internet, and common_core's `net::proxy_auto_detect`
+    # honors an explicitly-set PROXY without auto-detecting. Leaving it
+    # empty (or unset) lets the auto-detector pick the right value based
+    # on actual reachability. To force proxychains in your interactive
+    # shell, set `PROXY="proxychains4 -q"` in your local profile.
+    export PROXY="${PROXY:-}"
 
-    # Proxychains4 configuration file
+    # Proxychains4 configuration file (still useful for tools that
+    # invoke proxychains4 directly via a separate prefix variable).
     export PROXYCHAINS_CONFIG="/etc/proxychains4.conf"
 fi
