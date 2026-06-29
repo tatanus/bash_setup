@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.06.29.3] - 2026-06-29
+
 ### Removed
 
 - `install_extras.sh` moved to common_core (added in common_core
