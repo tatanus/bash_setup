@@ -5,6 +5,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `dotfiles/bash.env.sh:22` was unconditionally exporting
+  `DEBUG=true` on every interactive shell. Combined with
+  common_core's `util.sh` and `util_config.sh` emitting ~50
+  `debug` calls during library load (one per registered config
+  key, one per sourced module), every SSH login flooded the
+  banner with `[# DEBUG ]` lines. Default flipped to
+  `export DEBUG="${DEBUG:-false}"` -- quiet on login, opt in
+  per-shell or per-command with `DEBUG=true ...`.
+- `dotfiles/bash.visuals.sh::debug()` previously printed
+  unconditionally, with no level check, so even when scripts or
+  callers ran with `DEBUG=false` the function still fired. Added a
+  case-statement gate at the top of `debug()`:
+  `1|true|TRUE|yes|YES|on|ON` print, anything else (including
+  `false`/unset) silently returns. Other log functions
+  (`info` / `pass` / `warn` / `error` / `fail`) are untouched --
+  this only affects diagnostic noise. The two safeguards stack:
+  even if a downstream config re-exports `DEBUG=true`, the gate
+  alone is enough to silence by toggling the env var.
+
 ## [2026.06.29.0] - 2026-06-29
 
 ### Fixed

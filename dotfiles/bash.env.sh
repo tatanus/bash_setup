@@ -18,8 +18,12 @@ IFS=$'\n\t'
 if [[ -z "${BASH_ENV_SH_LOADED:-}" ]]; then
     declare -g BASH_ENV_SH_LOADED=true
 
-    # Debug mode (set to true or false)
-    export DEBUG=true
+    # Debug mode (set to true or false). Keep DEFAULT=false so interactive
+    # logins are quiet -- common_core's util.sh and util_config.sh emit
+    # ~50 `debug` lines during library init, which floods the SSH banner.
+    # Override with `DEBUG=true` in your own profile or before invoking a
+    # specific command if you want to see the trace.
+    export DEBUG="${DEBUG:-false}"
 
     # pass/fail/true/fall variables
     export PASS=0

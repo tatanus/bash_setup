@@ -70,6 +70,15 @@ if [[ -z "${BASH_VISUALS_SH_LOADED:-}" ]]; then
     }
 
     function debug() {
+        # Gated on the DEBUG env flag so interactive logins are not flooded
+        # by every util.sh / util_config.sh module-load message. Opt in with
+        # `DEBUG=1` (or `DEBUG=true`/`yes`) before sourcing bashrc or before
+        # invoking a script. Matches the DEBUG global in
+        # pentest_setup/config/config.sh and common_core's log.level convention.
+        case "${DEBUG:-false}" in
+            1 | true | TRUE | yes | YES | on | ON) ;;
+            *) return 0 ;;
+        esac
         local timestamp
         timestamp=$(date +"[%Y-%m-%d %H:%M:%S]")
         printf "%s ${orange}[# DEBUG ]${reset} %s\n" "${timestamp}" "$*"
