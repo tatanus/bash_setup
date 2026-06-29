@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.06.29.0] - 2026-06-29
+
 ### Fixed
 
 - `setup_screenrc` in `install.sh` mis-parsed the screen version
