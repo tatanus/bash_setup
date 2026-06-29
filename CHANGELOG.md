@@ -5,6 +5,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `install_extras.sh` proxy detection now probes actual Internet
+  reachability instead of just asking `command -v proxychains4`.
+  Auto-detection delegates to common_core's `net::proxy_auto_detect`
+  (added in common_core v2026.06.29.4) when available, and falls
+  back to an inline equivalent so the script still runs cleanly on
+  machines where common_core has not been deployed yet. Algorithm:
+  if `PROXY` is already set (even to empty) -> honor it; else if a
+  TCP/443 probe to 1.1.1.1 / 8.8.8.8 / 9.9.9.9 succeeds within 2s
+  per host -> `PROXY=""` (direct); else if `proxychains4` is
+  installed AND its config has a real `socks4|socks5|http|raw` entry
+  inside `[ProxyList]` -> `PROXY="proxychains4 -q"`; else -> empty
+  with a `[WARN]` so the user sees the downstream calls are about
+  to fail. CLI overrides (`--no-proxy`, `--proxy CMD`) and the
+  `PROXY=` env var still bypass detection.
+- `install_extras.sh` (top-level, sibling to `install.sh`). One-shot
+  system-side helper that installs the optional tools the interactive
+  shell expects (`eza`, `fzf`, `freeze`, `bat`, `duf`, `btop`), adds
+  the eza-community signed apt repository under
+  `/etc/apt/keyrings/gierens.gpg` + `/etc/apt/sources.list.d/gierens.list`,
+  sweeps known-stale `/pentest/*` directory remnants, and runs apt
+  cleanup. Complements `install.sh` (which deploys the dotfiles) --
+  this side handles the binaries.
+- The script uses the stack-wide `${PROXY}` dynamic command-prefix
+  convention (matching `pentest_setup/config/config.sh` and
+  `scripts/bash/wireless.sh`):
+  - Unset `PROXY` -> auto-detect: `proxychains4 -q` if proxychains4
+    is on PATH, otherwise empty (direct connection).
+  - Empty `PROXY` -> direct connection.
+  - Set `PROXY` -> used verbatim as the prefix.
+  CLI flags `--no-proxy` and `--proxy CMD` override the auto-detected
+  value for the run. A `--dry-run` flag previews every command without
+  executing. Reuses common_core's color logger if `util.sh` is
+  deployed; otherwise falls back to plain printf so the script is
+  standalone-runnable before common_core is installed.
+- Optimisations over the original hand-rolled snippet: batched
+  `apt install` (one call for all five tools), looped directory
+  removal with skip-if-absent counting, idempotent
+  add-eza-repo (no-op if keyring + sources file already present),
+  and explicit `mkdir -p /etc/apt/keyrings` error path.
+
+
 ## [2026.06.29.1] - 2026-06-29
 
 ### Fixed
