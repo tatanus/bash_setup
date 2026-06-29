@@ -5,6 +5,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `install_extras.sh` moved to common_core (added in common_core
+  v2026.06.29.5). The script lives alongside the
+  `net::proxy_auto_detect` helper it consumes, which is the correct
+  layering -- a system-bootstrap helper that delegates to common_core
+  belongs in common_core, not in bash_setup. To install the optional
+  shell extras now:
+
+      cd ~/common_core
+      sudo ./install_extras.sh
+
+  CLI flags, env vars, and behavior are unchanged; only the location.
+
+
 ## [2026.06.29.2] - 2026-06-29
 
 ### Added
