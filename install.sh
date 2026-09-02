@@ -118,14 +118,51 @@ readonly -a REQUIRED_DIRECTORIES=(
     "${BASH_LOG_DIR}"
 )
 
+#===============================================================================
+# Recommended tools
+#------------------------------------------------------------------------------
+# Checked (never installed) during install so the user knows which dotfile
+# features will silently degrade. Run common_core's install_tools.sh to get
+# them.
+#
+# An entry may list comma-separated alternates; the tool counts as present when
+# ANY of them resolves. That matters for bat: Debian and Kali ship the binary
+# as `batcat` (the `bat` name collides with bacula-console-qt), and
+# dotfiles/bash.aliases.sh already probes for both. Checking only "bat" here
+# reported "Missing: bat (optional)" on every Kali box that had it installed.
+#===============================================================================
 readonly -a RECOMMENDED_TOOLS=(
     "eza"
     "fzf"
     "ncat"
     "freeze"
-    "bat"
+    "bat,batcat"
     "duf"
     "btop"
+)
+
+# Linux-only. macOS provides clipboard access via the built-in pbpaste, which
+# dotfiles/bash.funcs.sh freezeCmd prefers, so there is nothing to check there.
+readonly -a RECOMMENDED_TOOLS_LINUX=(
+    "xclip,wl-paste"
+)
+
+# macOS-only. dotfiles/bash.aliases.sh aliases sed -> gsed and grep -> ggrep,
+# and dotfiles/bash.env.sh falls back to gdircolors; common_core's
+# platform::find_command looks for the rest. On Linux these ARE the system
+# tools, so checking for the g-prefixed names there would report a wall of
+# spurious "Missing:" warnings.
+readonly -a RECOMMENDED_TOOLS_MACOS=(
+    "gsed"
+    "ggrep"
+    "gawk"
+    "gtar"
+    "gfind"
+    "gxargs"
+    "gdate"
+    "gstat"
+    "greadlink"
+    "gdircolors"
 )
 
 #===============================================================================
@@ -307,24 +344,77 @@ function setup_directories() {
 }
 
 ###############################################################################
+# any_tool_exists
+#------------------------------------------------------------------------------
+# Purpose  : Report whether ANY command in a comma-separated alternates list is
+#            available, e.g. "bat,batcat" or "xclip,wl-paste".
+# Usage    : if any_tool_exists "bat,batcat"; then ...
+# Arguments:
+#   $1 : Comma-separated list of command names (required)
+# Returns  : 0 if at least one resolves, 1 otherwise
+# Requires : cmd::exists from common_core
+###############################################################################
+function any_tool_exists() {
+    local alternates="${1:-}"
+    local -a names=()
+    local name=""
+
+    [[ -z "${alternates}" ]] && return 1
+
+    local IFS=','
+    read -ra names <<< "${alternates}"
+    unset IFS
+
+    for name in "${names[@]}"; do
+        if cmd::exists "${name}"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+###############################################################################
 # check_recommended_tools
 #------------------------------------------------------------------------------
-# Purpose  : Check if recommended CLI tools are installed
+# Purpose  : Check if recommended CLI tools are installed, limiting the check
+#            to the tools that are actually meaningful on this OS.
 # Usage    : check_recommended_tools
 # Returns  : Always returns 0 (tools are optional)
-# Requires : RECOMMENDED_TOOLS array, cmd::exists from common_core
+# Requires : RECOMMENDED_TOOLS / RECOMMENDED_TOOLS_LINUX /
+#            RECOMMENDED_TOOLS_MACOS arrays, cmd::exists and os::detect
+#            from common_core
 ###############################################################################
 function check_recommended_tools() {
-    info "Checking recommended tools..."
+    local host_os=""
     local tool=""
+    local -a to_check=("${RECOMMENDED_TOOLS[@]}")
 
-    for tool in "${RECOMMENDED_TOOLS[@]}"; do
-        if cmd::exists "${tool}"; then
+    host_os="$(os::detect)"
+
+    case "${host_os}" in
+        macos)
+            to_check+=("${RECOMMENDED_TOOLS_MACOS[@]}")
+            ;;
+        linux | wsl)
+            to_check+=("${RECOMMENDED_TOOLS_LINUX[@]}")
+            ;;
+        *)
+            warn "Unrecognized OS '${host_os}'; checking common tools only"
+            ;;
+    esac
+
+    info "Checking recommended tools (${host_os})..."
+
+    for tool in "${to_check[@]}"; do
+        if any_tool_exists "${tool}"; then
             pass "Found: ${tool}"
         else
             warn "Missing: ${tool} (optional)"
         fi
     done
+
+    info "Install missing tools with common_core's install_tools.sh"
 
     return 0
 }
@@ -639,7 +729,17 @@ function main() {
                 info "[DRY-RUN] would deploy ${#BASH_DOT_FILES[@]} dotfile(s) to ${BASH_DIR}/"
                 info "[DRY-RUN] would deploy ${#COMMON_DOT_FILES[@]} common dotfile(s) to ${HOME}/"
                 info "[DRY-RUN] would create ${#REQUIRED_DIRECTORIES[@]} required director(y/ies)"
-                [[ "${skip_tools}" == "false" ]] && info "[DRY-RUN] would check ${#RECOMMENDED_TOOLS[@]} recommended tool(s)"
+                # Count the OS-specific additions too, so the preview matches
+                # what check_recommended_tools will actually walk.
+                if [[ "${skip_tools}" == "false" ]]; then
+                    local tool_count="${#RECOMMENDED_TOOLS[@]}"
+                    case "$(os::detect)" in
+                        macos) tool_count=$((tool_count + ${#RECOMMENDED_TOOLS_MACOS[@]})) ;;
+                        linux | wsl) tool_count=$((tool_count + ${#RECOMMENDED_TOOLS_LINUX[@]})) ;;
+                        *) ;;
+                    esac
+                    info "[DRY-RUN] would check ${tool_count} recommended tool(s)"
+                fi
                 ;;
             update)
                 info "[DRY-RUN] would compare checksums and re-copy any changed dotfile(s)"

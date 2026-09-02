@@ -5,6 +5,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `install.sh` recommended-tool check is now OS-aware. The common tools
+  (`eza`, `fzf`, `ncat`, `freeze`, `bat`, `duf`, `btop`) are checked on every
+  host, but the macOS-only GNU tools (`gsed`, `ggrep`, `gawk`, `gtar`,
+  `gfind`, `gxargs`, `gdate`, `gstat`, `greadlink`, `gdircolors`) are checked
+  only on macOS, and the Linux-only clipboard tools (`xclip`/`wl-paste`) only
+  on Linux. Previously the single flat list produced a wall of spurious
+  "Missing:" warnings for the g-prefixed tools on Linux, where those *are*
+  the system tools.
+- The check now accepts comma-separated alternates (new `any_tool_exists`
+  helper) and a tool counts as present when any alternate resolves. This
+  fixes `bat` reporting "Missing" on Debian/Kali, where the binary is named
+  `batcat` (`dotfiles/bash.aliases.sh` already probes for both), and lets
+  `xclip,wl-paste` satisfy either clipboard backend. The dry-run tool count
+  now reflects the OS-specific additions.
+- Points users at common_core's `install_tools.sh` to install anything the
+  check reports missing.
+
 ## [2026.06.29.5] - 2026-06-29
 
 ### Fixed
