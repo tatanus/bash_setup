@@ -61,6 +61,11 @@ make install   # equivalent to: bash install.sh install
 exec bash -l
 ```
 
+Re-running `install` over an existing install prompts for confirmation when
+run interactively (a `${HOME}/.config/bash/.bash_setup.version` marker records
+the prior install). Pass `-f`/`--force` to update without prompting; a
+non-interactive run proceeds automatically.
+
 ---
 
 ## Repository Layout

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `install.sh install` now detects a previous install (via a new
+  `${BASH_DIR}/.bash_setup.version` marker) and, when run interactively,
+  prompts before overwriting/updating it. `-f`/`--force` bypasses the prompt
+  (previously `--force` was a no-op that only printed a warning); `--dry-run`
+  never prompts; a non-interactive shell proceeds. The version marker is
+  written after a successful install.
 - `install.sh` recommended-tool check is now OS-aware. The common tools
   (`eza`, `fzf`, `ncat`, `freeze`, `bat`, `duf`, `btop`) are checked on every
   host, but the macOS-only GNU tools (`gsed`, `ggrep`, `gawk`, `gtar`,

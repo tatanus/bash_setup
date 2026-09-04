@@ -77,6 +77,9 @@ readonly COMMON_CORE_DIR="${HOME}/.config/bash/lib/common_core"
 readonly COMMON_CORE_UTIL="${COMMON_CORE_DIR}/util.sh"
 readonly BASH_DIR="${HOME}/.config/bash"
 readonly BASH_LOG_DIR="${BASH_DIR}/log"
+# Marker written on a successful install; its presence (and contents) let a
+# later run detect a prior install and prompt before overwriting.
+readonly BASH_SETUP_VERSION_FILE="${BASH_DIR}/.bash_setup.version"
 readonly DATA_DIR="${HOME}/DATA"
 readonly DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
 
@@ -194,7 +197,7 @@ OPTIONS:
     -h, --help      Show this help message
     -v, --version   Show version
     -q, --quiet     Suppress non-error output
-    -f, --force     Force overwrite without backup comparison
+    -f, --force     Update over an existing install without prompting
     -n, --dry-run   Preview install/update/uninstall actions without
                     making any changes on disk
     --skip-tools    Skip recommended tool checks during install
@@ -467,8 +470,55 @@ function files_differ() {
 # Returns  : 0 on success, 1 on failure
 # Requires : common_core file::copy function
 ###############################################################################
+###############################################################################
+# confirm_overwrite <force>
+#------------------------------------------------------------------------------
+# Purpose  : When a prior install is detected (BASH_SETUP_VERSION_FILE exists),
+#            decide whether to proceed. force=true or DRY_RUN=true proceed
+#            without prompting; a non-interactive shell refuses (advise
+#            --force); otherwise ask [y/N].
+# Returns  : 0 to proceed, 1 to abort.
+###############################################################################
+function confirm_overwrite() {
+    local force="${1:-false}"
+    [[ -f "${BASH_SETUP_VERSION_FILE}" ]] || return 0
+
+    local installed="unknown"
+    installed="$(cat "${BASH_SETUP_VERSION_FILE}" 2> /dev/null || printf 'unknown')"
+    info "Existing ${SCRIPT_NAME} install detected: version ${installed}"
+
+    if [[ "${force}" == "true" ]]; then
+        info "Force mode: updating over existing install (${installed} -> ${VERSION})"
+        return 0
+    fi
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        info "[DRY-RUN] would prompt to overwrite existing install (${installed} -> ${VERSION})"
+        return 0
+    fi
+    if [[ ! -t 0 ]]; then
+        info "Non-interactive shell; updating existing install (${installed} -> ${VERSION})"
+        return 0
+    fi
+
+    local reply
+    printf '%s %s already installed; update to %s? [y/N] ' \
+        "${SCRIPT_NAME}" "${installed}" "${VERSION}" >&2
+    read -r reply
+    case "${reply}" in
+        [yY] | [yY][eE][sS]) return 0 ;;
+        *)
+            info "Left existing installation unchanged."
+            return 1
+            ;;
+    esac
+}
+
 function cmd_install() {
     local skip_tools="${1:-false}"
+    local force="${2:-false}"
+
+    # Detect a prior install and confirm before overwriting (unless --force).
+    confirm_overwrite "${force}" || return 0
 
     info "Starting installation..."
 
@@ -511,6 +561,10 @@ function cmd_install() {
     if [[ -f "${HOME}/.bashrc" ]]; then
         info "To apply changes, run: source ~/.bashrc"
     fi
+
+    # Record the installed version so a later run can detect this install.
+    printf '%s\n' "${VERSION}" > "${BASH_SETUP_VERSION_FILE}" 2> /dev/null ||
+        warn "Could not write version marker: ${BASH_SETUP_VERSION_FILE}"
 
     pass "Installation complete!"
     return 0
@@ -711,12 +765,6 @@ function main() {
     # Load common_core and validate API
     load_common_core || return 1
 
-    # NOTE: If your common_core file::copy supports a force flag, you can
-    # standardize that via an env var or wrapper. This script does not assume it.
-    if [[ "${force}" == "true" ]]; then
-        warn "--force was requested. If common_core honors a force mode via env/flags, ensure it is enabled there."
-    fi
-
     # --dry-run short-circuits the actual command. Each cmd_* function below
     # would create / overwrite / restore files on disk; under dry-run we just
     # report which command was selected (and any options) and exit cleanly.
@@ -756,7 +804,7 @@ function main() {
     fi
 
     case "${command}" in
-        install) cmd_install "${skip_tools}" ;;
+        install) cmd_install "${skip_tools}" "${force}" ;;
         update) cmd_update ;;
         uninstall) cmd_uninstall ;;
         *)
