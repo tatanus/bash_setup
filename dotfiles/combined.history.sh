@@ -42,8 +42,8 @@ IFS=$'\n\t'
 # =============================================================================
 # Version Information
 # =============================================================================
-readonly SCRIPT_VERSION="2.0.0"
-readonly SCRIPT_NAME="combined.history.sh"
+readonly COMMAND_LOGGING_VERSION="2.0.0"
+readonly COMMAND_LOGGING_NAME="combined.history.sh"
 
 # =============================================================================
 # Magic Constants
@@ -788,7 +788,7 @@ EOF
 
         # Check syslog capability if enabled
         if [[ "${SYSLOG_ENABLED}" == true ]]; then
-            test_message="Test message from ${SCRIPT_NAME} v${SCRIPT_VERSION} at $(date)"
+            test_message="Test message from ${COMMAND_LOGGING_NAME} v${COMMAND_LOGGING_VERSION} at $(date)"
             if write_to_syslog "${test_message}"; then
                 pass "Successfully sent test message to syslog: ${test_message}"
             else
@@ -864,5 +864,5 @@ EOF
         test_logging_setup
     fi
 
-    info "Command logging initialized for Bash/Zsh (v${SCRIPT_VERSION}). Log file: ${HISTORY_FILE}"
+    info "Command logging initialized for Bash/Zsh (v${COMMAND_LOGGING_VERSION}). Log file: ${HISTORY_FILE}"
 fi
