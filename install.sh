@@ -513,6 +513,33 @@ function confirm_overwrite() {
     esac
 }
 
+###############################################################################
+# configure_proxy
+#------------------------------------------------------------------------------
+# Purpose  : At install time, check whether the host needs a proxy to reach
+#            the Internet and persist the result to proxy.conf so every shell
+#            and stack script defaults to the right ${PROXY}. Honors the
+#            "write if absent" policy: an existing config is left untouched
+#            unless force is true. Requires common_core (net::proxy_save).
+# Usage    : configure_proxy [force]
+###############################################################################
+function configure_proxy() {
+    local force="${1:-false}" conf=""
+    if ! declare -F net::proxy_save > /dev/null 2>&1; then
+        debug "common_core net::proxy_save unavailable; skipping proxy auto-detect"
+        return 0
+    fi
+    conf="$(net::proxy_conf_path)"
+    if [[ -f "${conf}" && "${force}" != "true" ]]; then
+        info "Proxy config already present: ${conf} (use -f/--force to re-detect)"
+        return 0
+    fi
+    info "Detecting whether Internet access needs a proxy..."
+    net::proxy_save ||
+        warn "Could not persist proxy config; set PROXY manually in ${conf}"
+    return 0
+}
+
 function cmd_install() {
     local skip_tools="${1:-false}"
     local force="${2:-false}"
@@ -553,6 +580,9 @@ function cmd_install() {
 
     # Configure screen based on version
     setup_screenrc || return 1
+
+    # Detect + persist the proxy default (writes proxy.conf if absent).
+    configure_proxy "${force}"
 
     if [[ "${skip_tools}" != "true" ]]; then
         check_recommended_tools
@@ -621,6 +651,9 @@ function cmd_update() {
 
     # Configure screen based on version
     setup_screenrc || return 1
+
+    # Detect + persist the proxy default if it was never written (write-if-absent).
+    configure_proxy "false"
 
     return 0
 }

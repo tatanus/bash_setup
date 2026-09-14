@@ -95,7 +95,21 @@ if [[ -z "${BASH_ENV_SH_LOADED:-}" ]]; then
     # empty (or unset) lets the auto-detector pick the right value based
     # on actual reachability. To force proxychains in your interactive
     # shell, set `PROXY="proxychains4 -q"` in your local profile.
-    export PROXY="${PROXY:-}"
+    # Establish PROXY: an explicit value already in the environment wins;
+    # otherwise load the persisted default from proxy.conf (written by the
+    # installer's auto-detect). No network is touched here -- it just reads a
+    # file. Works whether or not common_core is sourced yet.
+    if declare -F net::proxy_load > /dev/null 2>&1; then
+        net::proxy_load
+    else
+        _proxy_conf="${PROXY_CONF:-${XDG_CONFIG_HOME:-${HOME}/.config}/bash/proxy.conf}"
+        if [[ -z "${PROXY+x}" && -r "${_proxy_conf}" ]]; then
+            # shellcheck source=/dev/null
+            source "${_proxy_conf}"
+        fi
+        unset _proxy_conf
+        export PROXY="${PROXY:-}"
+    fi
 
     # Proxychains4 configuration file (still useful for tools that
     # invoke proxychains4 directly via a separate prefix variable).

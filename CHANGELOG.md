@@ -5,6 +5,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Persisted proxy default. `install.sh` now auto-detects at install/update
+  time whether the host needs a proxy and writes `~/.config/bash/proxy.conf`
+  (write-if-absent; `-f/--force` re-detects), and `dotfiles/bash.env.sh` loads
+  it so every interactive shell defaults to the right `${PROXY}` without any
+  network call at startup. Edit `proxy.conf` (or set `PROXY` in the env, which
+  wins) to override.
+
 ### Changed
 
 - `install.sh install` now detects a previous install (via a new
