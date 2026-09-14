@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `dotfiles/bash.prompt_funcs.sh` `get_external_ip` no longer hangs the login
+  prompt. It fetched the external IP synchronously with a direct (non-proxied)
+  `curl`, so on a host that only reaches the internet via `proxychains4 -q` the
+  first prompt stalled ~60s. It is now cache-first and refreshes in a detached,
+  proxy-aware (`${PROXY}`), timeout-bounded background job, so the prompt never
+  waits on the network. Added `PROMPT_SHOW_EXTERNAL_IP=0` (disable) and
+  `PROMPT_EXTERNAL_IP_TTL` knobs. Also fixed a `set -u` crash (`File: unbound
+  variable`) from using BSD `stat -f` on macOS hosts that have GNU coreutils'
+  `stat` on PATH — file mtime now probes `stat -c` then `stat -f`.
 - `dotfiles/combined.history.sh` no longer declares `SCRIPT_NAME` /
   `SCRIPT_VERSION` as `readonly` globals. Because this dotfile is sourced into
   every interactive shell, the readonly global `SCRIPT_NAME` collided with any

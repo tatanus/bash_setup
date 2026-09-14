@@ -459,97 +459,117 @@ if [[ -z "${BASH_PROMPT_FUNCS_SH_LOADED:-}" ]]; then
     #   - Prints and exports PROMPT_EXTERNAL_IP on success.
     #   - Returns non-zero on any failure, printing an error message.
     ###############################################################################
-    function get_external_ip() {
-        # -------------------------------------------------------------------------
-        # Variable declarations (explicit to avoid unbound errors under set -u)
-        # -------------------------------------------------------------------------
-        local cache_file="/tmp/external_ip.cache"
-        local external_ip=""
-        local now=""
-        local last_modified=""
-        local age_sec=0
-        local stat_cmd=""
-        local os_type=""
-        local fetch_success=0
-        local url=""
-
-        # -------------------------------------------------------------------------
-        # Use cached value if still valid (<10min)
-        # -------------------------------------------------------------------------
-        if [[ -f "${cache_file}" ]]; then
-            now="$(date +%s)"
-            if [[ "${os_type}" == "macos" ]]; then
-                if ! last_modified="$(stat -f %m "${cache_file}" 2> /dev/null)"; then
-                    last_modified=0
-                fi
-            else
-                if ! last_modified="$(stat -c %Y "${cache_file}" 2> /dev/null)"; then
-                    last_modified=0
-                fi
-            fi
-
-            age_sec=$((now - last_modified))
-            if ((age_sec < 600)); then
-                external_ip="$(< "${cache_file}")"
-                if [[ "${external_ip}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                    export PROMPT_EXTERNAL_IP="${external_ip}"
-                    printf "%s\n" "${PROMPT_EXTERNAL_IP}"
-                    return 0
-                else
-                    rm -f "${cache_file}"
-                fi
-            fi
-        fi
-
-        # -------------------------------------------------------------------------
-        # Connectivity check (1 ping)
-        # -------------------------------------------------------------------------
-        if [[ "${os_type}" == "macos" ]]; then
-            # macOS has no ping timeout option; -t sets TTL not timeout
-            if ! ping -c 1 1.1.1.1 > /dev/null 2>&1; then
-                return 1
-            fi
-        else
-            if ! ping -c 1 -W 2 1.1.1.1 > /dev/null 2>&1; then
-                return 1
-            fi
-        fi
-
-        # -------------------------------------------------------------------------
-        # Attempt to fetch external IP from multiple services
-        # -------------------------------------------------------------------------
+    ###########################################################################
+    # Name: _external_ip_refresh
+    # Short Description: Background worker that fetches the external IP and
+    #   writes it to the cache. Runs detached from the prompt so it can never
+    #   block it. Proxy-aware (${PROXY}) so it works on hosts that only reach
+    #   the internet through proxychains. Bounded timeouts.
+    ###########################################################################
+    function _external_ip_refresh() {
+        local cache_file="${1}" lock_file="${2}"
+        local ip="" url
         local services=(
             "https://ifconfig.me/ip"
             "https://api.ipify.org"
             "https://ipecho.net/plain"
         )
-
         for url in "${services[@]}"; do
-            if command -v curl &> /dev/null; then
-                external_ip="$(curl -4 -s --max-time 5 --connect-timeout 3 "${url}")"
-            elif command -v wget &> /dev/null; then
-                external_ip="$(wget -4 -qO- --timeout=5 --tries=1 "${url}")"
+            if command -v curl > /dev/null 2>&1; then
+                # shellcheck disable=SC2086  # ${PROXY} must word-split into cmd+args
+                ip="$(${PROXY:-} curl -4 -s --max-time 8 --connect-timeout 4 "${url}" 2> /dev/null)"
+            elif command -v wget > /dev/null 2>&1; then
+                # shellcheck disable=SC2086
+                ip="$(${PROXY:-} wget -4 -qO- --timeout=8 --tries=1 "${url}" 2> /dev/null)"
             else
-                return 1
+                break
             fi
-
-            # Validate external_ip
-            if [[ "${external_ip}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                fetch_success=1
+            if [[ "${ip}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                printf '%s\n' "${ip}" > "${cache_file}"
                 break
             fi
         done
+        rm -f "${lock_file}"
+    }
 
-        if [[ "${fetch_success}" -ne 1 ]]; then
-            return 1
+    ###########################################################################
+    # Name: _prompt_file_mtime
+    # Short Description: Portable file mtime (epoch seconds), 0 if unavailable.
+    #   Tries GNU `stat -c %Y` first, then BSD `stat -f %m`. Probing the flag
+    #   (not `uname`) is correct even on macOS hosts that have GNU coreutils'
+    #   `stat` on PATH, where `stat -f` means filesystem status, not format.
+    ###########################################################################
+    function _prompt_file_mtime() {
+        local f="${1}" m=""
+        m="$(stat -c %Y "${f}" 2> /dev/null)"
+        [[ "${m}" =~ ^[0-9]+$ ]] || m="$(stat -f %m "${f}" 2> /dev/null)"
+        [[ "${m}" =~ ^[0-9]+$ ]] || m=0
+        printf '%s\n' "${m}"
+    }
+
+    ###############################################################################
+    # Name: get_external_ip
+    # Short Description: Sets PROMPT_EXTERNAL_IP without ever blocking the prompt.
+    #
+    # Long Description:
+    #   Cache-first: if /tmp/external_ip.cache holds a recent (<TTL) IP, use it
+    #   and return immediately. Otherwise it prints the last-known value (or
+    #   "Unavailable") NOW and kicks off a detached, proxy-aware background
+    #   refresh (single-flight via a lock file) that updates the cache for a
+    #   later prompt. The prompt therefore never waits on the network -- the
+    #   old synchronous curl/ping is what hung login on proxy-only hosts.
+    #
+    #   Tunables:
+    #     PROMPT_SHOW_EXTERNAL_IP=0   disable the lookup entirely
+    #     PROMPT_EXTERNAL_IP_TTL=600  cache lifetime in seconds
+    #     PROXY="proxychains4 -q"     command prefix used for the fetch
+    ###############################################################################
+    function get_external_ip() {
+        local cache_file="/tmp/external_ip.cache"
+        local lock_file="/tmp/external_ip.lock"
+        local ttl="${PROMPT_EXTERNAL_IP_TTL:-600}"
+        local external_ip="" now last_modified age_sec
+
+        if [[ "${PROMPT_SHOW_EXTERNAL_IP:-1}" != "1" ]]; then
+            export PROMPT_EXTERNAL_IP=""
+            return 0
         fi
 
-        # -------------------------------------------------------------------------
-        # Cache the new IP and output
-        # -------------------------------------------------------------------------
-        echo "${external_ip}" > "${cache_file}"
-        export PROMPT_EXTERNAL_IP="${external_ip}"
-        printf "%s\n" "${PROMPT_EXTERNAL_IP}"
+        # 1. Fresh cache -> use it immediately.
+        if [[ -f "${cache_file}" ]]; then
+            now="$(date +%s)"
+            last_modified="$(_prompt_file_mtime "${cache_file}")"
+            age_sec=$((now - last_modified))
+            external_ip="$(< "${cache_file}")"
+            if ((age_sec < ttl)) && [[ "${external_ip}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                export PROMPT_EXTERNAL_IP="${external_ip}"
+                printf '%s\n' "${PROMPT_EXTERNAL_IP}"
+                return 0
+            fi
+        fi
+
+        # 2. Stale/missing: show what we have NOW; refresh in the background.
+        if [[ "${external_ip}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            export PROMPT_EXTERNAL_IP="${external_ip}" # last-known
+        else
+            export PROMPT_EXTERNAL_IP="${PROMPT_EXTERNAL_IP:-Unavailable}"
+        fi
+        printf '%s\n' "${PROMPT_EXTERNAL_IP}"
+
+        # Single-flight: only spawn a refresh if one is not already running or
+        # recent. A stale lock (>120s, e.g. a killed worker) is reclaimed.
+        if [[ -f "${lock_file}" ]]; then
+            last_modified="$(_prompt_file_mtime "${lock_file}")"
+            (($(date +%s) - last_modified > 120)) && rm -f "${lock_file}"
+        fi
+        if (
+            set -o noclobber
+            : > "${lock_file}"
+        ) 2> /dev/null; then
+            # Run inside a subshell so no job-control notice ("[1] pid") reaches
+            # the interactive shell; the worker reparents and outlives it.
+            (_external_ip_refresh "${cache_file}" "${lock_file}" &) 2> /dev/null
+        fi
         return 0
     }
 fi
