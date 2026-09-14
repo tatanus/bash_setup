@@ -30,6 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Points users at common_core's `install_tools.sh` to install anything the
   check reports missing.
 
+### Fixed
+
+- `dotfiles/combined.history.sh` no longer declares `SCRIPT_NAME` /
+  `SCRIPT_VERSION` as `readonly` globals. Because this dotfile is sourced into
+  every interactive shell, the readonly global `SCRIPT_NAME` collided with any
+  function that later ran `local SCRIPT_NAME` (e.g. a tab-completion helper),
+  which failed with `local: SCRIPT_NAME: readonly variable`. The constants are
+  now namespaced to `COMMAND_LOGGING_NAME` / `COMMAND_LOGGING_VERSION`.
+
 ## [2026.06.29.5] - 2026-06-29
 
 ### Fixed
