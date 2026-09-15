@@ -502,4 +502,26 @@ if [[ -z "${BASH_FUNCS_SH_LOADED:-}" ]]; then
             return "${FAIL}"
         fi
     }
+
+    ###########################################################################
+    # reload_env
+    # Re-source the unified env file so the newest ENV settings take effect in
+    # the current shell without opening a new one. Prefers common_core's
+    # env::reload; falls back to sourcing the file directly.
+    ###########################################################################
+    function reload_env() {
+        if declare -F env::reload > /dev/null 2>&1; then
+            env::reload
+            return $?
+        fi
+        local f="${PENTEST_ENV_FILE:-${XDG_CONFIG_HOME:-${HOME}/.config}/bash/pentest.env.sh}"
+        if [[ -r "${f}" ]]; then
+            # shellcheck source=/dev/null
+            source "${f}"
+            info "Reloaded environment from ${f}"
+            return 0
+        fi
+        warn "reload_env: env file not found: ${f}"
+        return 1
+    }
 fi

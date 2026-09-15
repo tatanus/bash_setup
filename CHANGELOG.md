@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `reload_env` shell function (dotfiles/bash.funcs.sh): re-source the unified
+  env file (`pentest.env.sh`) in the current shell so the newest ENV settings
+  take effect without opening a new shell. Prefers common_core's `env::reload`,
+  falls back to sourcing the file directly.
+
 - Persisted proxy default. `install.sh` now auto-detects at install/update
   time whether the host needs a proxy and writes `~/.config/bash/proxy.conf`
   (write-if-absent; `-f/--force` re-detects), and `dotfiles/bash.env.sh` loads
