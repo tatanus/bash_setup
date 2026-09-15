@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Removed the `alias PROXY="proxychains4 -q"` from `dotfiles/bash.aliases.sh`.
+  It collided with the `PROXY` environment variable (the dynamic proxy prefix
+  every tool/script uses as `${PROXY}`): an alias only expands in command
+  position and never represents the empty/direct case. Tools use `${PROXY}`;
+  `${PROXYCHAINS_CMD}` remains for an explicit, always-on proxychains prefix.
 
 - `reload_env` shell function (dotfiles/bash.funcs.sh): re-source the unified
   env file (`pentest.env.sh`) in the current shell so the newest ENV settings

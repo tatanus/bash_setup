@@ -111,12 +111,15 @@ if [[ -z "${BASH_ALIAS_SH_LOADED:-}" ]]; then
     fi
 
     ###############################################################################
-    # proxychains alias
+    # proxychains
+    #---------------------------------------------------------------------------
+    # No `PROXY` alias: `PROXY` is the environment variable (the dynamic proxy
+    # prefix, empty for direct or "proxychains4 -q" when needed) that every tool
+    # and script uses as `${PROXY}`. An alias of the same name only expands in
+    # command position and never carries the empty/direct case, so it collided
+    # with the variable. Use `${PROXY} <cmd>` (or the fixed `${PROXYCHAINS_CMD}`
+    # when you explicitly want proxychains regardless of reachability).
     ###############################################################################
-    if check_command "proxychains4"; then
-        alias PROXY="proxychains4 -q"
-        debug "Alias set: PROXY -> proxychains4 -q"
-    fi
 
     ###############################################################################
     # curl customizations (only if available)
