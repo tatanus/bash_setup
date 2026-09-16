@@ -5,6 +5,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2026.09.16.0] - 2026-09-16
+
+
 ### Added
 - Removed the `alias PROXY="proxychains4 -q"` from `dotfiles/bash.aliases.sh`.
   It collided with the `PROXY` environment variable (the dynamic proxy prefix
