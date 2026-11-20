@@ -230,3 +230,12 @@ done
 ###############################################################################
 # EXTRA CONFIGS
 ###############################################################################
+
+###############################################################################
+# RELAX STRICT MODE FOR THE INTERACTIVE SESSION
+###############################################################################
+# set -u above guards everything this file sources. Leaving it on in the
+# interactive shell breaks third-party hooks that run after bashrc and
+# reference unset variables (e.g. iTerm2 3.7+ auto-injected shell
+# integration: "ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX: unbound variable").
+set +u
