@@ -107,8 +107,11 @@ __bp_preexec_interactive_mode=""
 # Two hook arrays. Users append:
 #     preexec_functions+=(my_preexec_fn)
 #     precmd_functions+=(my_precmd_fn)
-declare -a precmd_functions
-declare -a preexec_functions
+# -g is required: some loaders (e.g. iTerm2 3.7+ shell-integration
+# injection) source bashrc from inside a function, where a bare
+# `declare` creates a local that vanishes when the loader returns.
+declare -ga precmd_functions
+declare -ga preexec_functions
 
 # String injected into PROMPT_COMMAND by __bp_install_after_session_init.
 # When the user hits Enter for the first time, this string runs, snapshots
