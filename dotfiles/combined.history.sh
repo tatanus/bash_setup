@@ -382,23 +382,27 @@ EOF
     ###############################################################################
     # basic_lock
     #------------------------------------------------------------------------------
-    # Purpose  : Acquire a basic lock if flock is unavailable
+    # Purpose  : Acquire a basic lock if flock is unavailable, retrying for up
+    #            to ~2s so concurrent shell startups (e.g. restored sessions)
+    #            wait their turn instead of dropping entries
     # Arguments: None
     # Outputs  : None
     # Returns  : 0 if lock acquired, 1 otherwise
     ###############################################################################
     function basic_lock() {
-        if [[ -f "${LOCK_FILE}" ]]; then
-            local pid
+        local pid
+        local tries=0
+        while [[ -f "${LOCK_FILE}" ]]; do
             pid=$(< "${LOCK_FILE}")
-            if ! kill -0 "${pid}" 2> /dev/null; then
+            if [[ -z "${pid}" ]] || ! kill -0 "${pid}" 2> /dev/null; then
                 # Stale lock
                 rm -f "${LOCK_FILE}"
-            else
-                # Active lock
-                return 1
+                break
             fi
-        fi
+            # Active lock
+            ((tries++ >= 20)) && return 1
+            sleep 0.1
+        done
         printf '%s\n' "$$" > "${LOCK_FILE}"
         return 0
     }
@@ -578,7 +582,10 @@ EOF
             # Use file descriptors to avoid subshell issues
             # FD 200 chosen to avoid conflicts with common descriptors (0-9)
             exec 200> "${LOCK_FILE}"
-            if ! flock -n 200; then
+            # Wait briefly rather than -n: many shells starting at once
+            # (e.g. iTerm restoring sessions) contend for this lock.
+            if ! flock -w 2 200; then
+                exec 200>&-
                 warn "Could not acquire lock. Skipping log entry."
                 return 1
             fi
