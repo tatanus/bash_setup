@@ -5,6 +5,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- iTerm2 3.7+ auto-injected shell integration aborted every new shell with
+  `ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX: unbound variable`. iTerm sources
+  its integration script *after* bashrc, and bashrc left `set -u` enabled in
+  the interactive session. `dotfiles/bashrc` now ends with `set +u`: strict
+  mode still guards everything bashrc sources, but third-party prompt/DEBUG
+  hooks no longer crash on unset variables.
+- Custom prompt not displayed (fell back to the macOS default
+  `host:dir user$`) under iTerm2 3.7+. iTerm's loader sources bashrc from
+  inside a function, so `dotfiles/bash-preexec.sh`'s bare
+  `declare -a precmd_functions` / `preexec_functions` created function-local
+  arrays that vanished when the loader returned, taking the `gen_prompt`
+  registration with them. Both are now `declare -ga`.
+- Spurious `Could not acquire lock. Skipping log entry.` warnings (and
+  dropped history entries) when many shells start at once, e.g. iTerm
+  restoring sessions after a reboot. `dotfiles/combined.history.sh` used
+  `flock -n` (fail instantly on any contention); it now waits up to 2s
+  (`flock -w 2`) and closes FD 200 on failure. The no-flock `basic_lock`
+  fallback now retries for ~2s and treats an empty lock file as stale.
+
 ## [2026.09.16.0] - 2026-09-16
 
 
